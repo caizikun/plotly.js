@@ -64,7 +64,7 @@
         0.995,
         1
       ],
-      "t": [
+      "theta": [
         0,
         6,
         12,
@@ -129,13 +129,10 @@
       ],
       "mode": "lines",
       "name": "Figure8",
-      "marker": {
-        "color": "none",
-        "line": {
-          "color": "peru"
-        }
+      "line": {
+        "color": "peru"
       },
-      "type": "scatter"
+      "type": "scatterpolar"
     },
     {
       "r": [
@@ -201,7 +198,7 @@
         0.997,
         1
       ],
-      "t": [
+      "theta": [
         0,
         6,
         12,
@@ -266,13 +263,10 @@
       ],
       "mode": "lines",
       "name": "Cardioid",
-      "marker": {
-        "color": "none",
-        "line": {
-          "color": "darkviolet"
-        }
+      "line": {
+        "color": "darkviolet"
       },
-      "type": "scatter"
+      "type": "scatterpolar"
     },
     {
       "r": [
@@ -338,7 +332,7 @@
         0.996,
         1
       ],
-      "t": [
+      "theta": [
         0,
         6,
         12,
@@ -403,13 +397,10 @@
       ],
       "mode": "lines",
       "name": "Hypercardioid",
-      "marker": {
-        "color": "none",
-        "line": {
-          "color": "deepskyblue"
-        }
+      "line": {
+        "color": "deepskyblue"
       },
-      "type": "scatter"
+      "type": "scatterpolar"
     },
     {
       "r": [
@@ -475,7 +466,7 @@
         0.998,
         1
       ],
-      "t": [
+      "theta": [
         0,
         6,
         12,
@@ -540,13 +531,10 @@
       ],
       "mode": "lines",
       "name": "Subcardioid",
-      "marker": {
-        "color": "none",
-        "line": {
-          "color": "orangered"
-        }
+      "line": {
+        "color": "orangered"
       },
-      "type": "scatter"
+      "type": "scatterpolar"
     },
     {
       "r": [
@@ -612,7 +600,7 @@
         0.997,
         1
       ],
-      "t": [
+      "theta": [
         0,
         6,
         12,
@@ -677,13 +665,10 @@
       ],
       "mode": "lines",
       "name": "Supercardioid",
-      "marker": {
-        "color": "none",
-        "line": {
-          "color": "green"
-        }
+      "line": {
+        "color": "green"
       },
-      "type": "scatter"
+      "type": "scatterpolar"
     }
   ],
   "layout": {
@@ -693,18 +678,13 @@
       "size": 12,
       "color": "#000"
     },
-    "showlegend": true,
     "width": 500,
     "height": 400,
-    "margin": {
-      "l": 40,
-      "r": 40,
-      "b": 20,
-      "t": 40,
-      "pad": 0
+    "margin": {"l": 40, "r": 40, "b": 20, "t": 40, "pad": 0},
+    "polar": {
+      "bgcolor": "rgb(255, 255, 255)",
+      "orientation": -90
     },
-    "paper_bgcolor": "rgb(255, 255, 255)",
-    "plot_bgcolor": "rgb(255, 255, 255)",
-    "orientation": -90
+    "paper_bgcolor": "rgb(255, 255, 255)"
   }
 }

@@ -1,0 +1,34 @@
+{
+    "data": [{
+        "type": "scatterpolar",
+        "mode": "markers+lines",
+        "r": [1, 2, 3],
+        "theta": [0, 45, 180],
+        "line": {
+            "shape": "spline"
+        }
+    }, {
+        "type": "scatterpolar",
+        "mode": "markers+lines",
+        "r": [1, 2, 3],
+        "theta": [-0, -45, -180],
+        "line": {
+            "shape": "spline"
+        },
+        "subplot": "polar2"
+    }],
+
+    "layout": {
+        "showlegend": false,
+        "polar": {
+            "domain": {
+                "x": [0, 0.48]
+            }
+        },
+        "polar2": {
+            "domain": {
+                "x": [0.52, 1]
+            }
+        }
+    }
+}
