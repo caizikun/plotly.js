@@ -37,19 +37,23 @@ function Polar(gd, id) {
     this.hasClipOnAxisFalse = null;
     this.traceHash = {};
     this.layers = {};
+    this.clipPaths = {};
 
     var fullLayout = gd._fullLayout;
     var polarLayout = fullLayout[id];
-    this.clipId = 'clip' + fullLayout._uid + id;
+    var clipId = this.clipId = 'clip' + fullLayout._uid + id;
 
-    this.clipDef = fullLayout._clips.append('clipPath')
-        .attr('id', this.clipId)
+    this.clipPaths.circle = fullLayout._clips.append('clipPath')
+        .attr('id', clipId + '-circle')
+        .append('circle');
 
-    this.clipCircle = this.clipDef.append('circle')
-        .attr({cx: 0, cy: 0});
-
+    this.clipPaths.rect = fullLayout._clips.append('clipPath')
+        .attr('id', clipId + '-rect')
+        .append('rect');
+    
     this.framework = fullLayout._polarlayer.append('g')
-        .attr('class', id);
+        .attr('class', id)
+//         .call(Drawing.setClipUrl, clipId + '-rect');
 
     this.viewInitial = {
         x: polarLayout.x,
@@ -116,7 +120,7 @@ proto.updateLayers = function(fullLayout, polarLayout) {
                 case 'frontplot':
                     sel.append('g')
                         .classed('scatterlayer', true)
-                        .call(Drawing.setClipUrl, _this.clipId);
+                        .call(Drawing.setClipUrl, _this.clipId + '-circle');
                     break;
                 case 'backplot':
                     sel.append('g').classed('maplayer', true);
@@ -168,40 +172,22 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     // lengths of the layout domain box
     var xLength = _this.xLength = gs.w * (xDomain[1] - xDomain[0]);
     var yLength = _this.yLength = gs.h * (yDomain[1] - yDomain[0]);
+    // normalized coordinates of the subplot's center
+    var xPos = polarLayout.x;
+    var yPos = polarLayout.y;
     // px coordinates of the subplot's center
-    var cx = _this.cx = gs.l + gs.w * polarLayout.x;
-    var cy = _this.cy = gs.t + gs.h * (1 - polarLayout.y);
-    // diameter of polar chart in px
-    var diameter;
-    // gap (in px and normalized coordinates) between layout domain and actual domain
-    var gap, gapNC;
+    var cx = _this.cx = gs.l + gs.w * xPos;
+    var cy = _this.cy = gs.t + gs.h * (1 - yPos);
+    // diameter of polar chart in px and normalized coordinates
+    var diameter = _this.diameter = Math.min(xLength, yLength);
+    var radius = diameter / 2;
     // actual domains of the polar chart that give a square in px coordinates
-    var xDomain2, yDomain2;
+    var xDomain2 = _this.xDomain2 = [xPos - radius / gs.w, xPos + radius / gs.w];
+    var yDomain2 = _this.yDomain2 = [yPos - radius / gs.h, yPos + radius / gs.h];
     // actual offsets from paper edge to the subplot box top-left corner
-    var xOffset2, yOffset2;
-
-    if(xLength > yLength) {
-        diameter = yLength;
-        gap = (xLength - yLength) / 2;
-        gapNC = gap / gs.w;
-        xDomain2 = [xDomain[0] + gapNC, xDomain[1] - gapNC];
-        yDomain2 = yDomain.slice();
-        xOffset2 = xOffset + gap;
-        yOffset2 = yOffset;
-    } else {
-        diameter = xLength;
-        gap = (yLength - xLength) / 2;
-        gapNC = gap / gs.h;
-        xDomain2 = xDomain.slice();
-        yDomain2 = [yDomain[0] + gapNC, yDomain[1] - gapNC];
-        xOffset2 = xOffset;
-        yOffset2 = yOffset + gap;
-    }
-
-    _this.diameter = diameter;
-    _this.xOffset2 = xOffset2;
-    _this.yOffset2 = yOffset2;
-
+    var xOffset2 = _this.xOffset2 = gs.l + gs.w * xDomain2[0];
+    var yOffset2 = _this.yOffset2 = gs.t + gs.h * (1 - yDomain2[1]);
+    // ...
     var rRange = radialLayout.range;
     var zoom = polarLayout.zoom;
     var cartesianRange = [-rRange[1], rRange[1]];
@@ -226,10 +212,11 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         // make this an 'x' axis to make positioning (especially rotation) easier
         _id: 'x',
         // radialaxis uses 'top'/'bottom' -> convert to 'x' axis equivalent
+        // TODO does not work!!
         side: {left: 'top', right: 'bottom'}[radialLayout.side],
         // spans 1/2 of the polar subplot
         domain: [polarLayout.x, xDomain2[1]],
-        _length: diameter / gs.w / 2,
+        _length: radius / gs.w,
         _pos: 0,
         // dummy truthy value to make Axes.doTicks draw the grid
         _counteraxis: true,
@@ -242,8 +229,15 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     radialAxis.setScale();
     Axes.doTicks(gd, radialAxis, true);
 
-    // maybe radial axis should be above frontplot ??
-    var radialTransform = 'translate(' + cx + ',' + cy + ')rotate(0)';
+    // TODO maybe radial axis should be above frontplot ??
+
+    // TODO add support for other all supported theta types
+    var radialAxisAngle = _this.radialAxisAngle = radialLayout.angle === undefined ? 
+        0 : 
+        -radialLayout.angle;
+
+    var radialTransform = 'translate(' + cx + ',' + cy + ')rotate(' + radialAxisAngle + ')';
+
     layers.radialaxis.attr('transform', radialTransform);
     layers.radialaxisgrid
         .attr('transform', radialTransform)
@@ -252,7 +246,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         display: radialLayout.showline ? null : 'none',
         x1: 0,
         y1: 0,
-        x2: diameter / 2,
+        x2: radius,
         y2: 0,
         transform: radialTransform
     })
@@ -271,9 +265,9 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         side: 'bottom',
         // dummy
         domain: [0, 1],
-        _length: diameter,
+        _length: radius,
         _pos: 0,
-        // maybe?
+        // TODO maybe??
         _transfn: function() {},
     });
     Axes.setConvert(angularAxis, fullLayout);
@@ -297,7 +291,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         display: angularLayout.showline ? null : 'none',
         cx: cx,
         cy: cy,
-        r: diameter / 2
+        r: radius
     })
     .attr('stroke-width', angularLayout.linewidth)
     .call(Color.stroke, angularLayout.linecolor);
@@ -307,14 +301,21 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     layers.bgcircle.attr({
         cx: cx,
         cy: cy,
-        r: diameter / 2
+        r: radius
     })
     .call(Color.fill, polarLayout.bgcolor);
 
-    _this.clipCircle.attr({
+    _this.clipPaths.circle.attr({
         cx: cx - xOffset2,
         cy: cy - yOffset2,
-        r: diameter / 2
+        r: radius
+    });
+
+    _this.clipPaths.rect.attr({
+        x: xOffset,
+        y: yOffset,
+        width: xLength,
+        height: yLength
     });
 };
 
@@ -394,8 +395,6 @@ proto.updateMainDrag = function(fullLayout, polarLayout) {
             box.r = Math.max(x0, x1) + delta;
         }
 
-        console.log(box)
-
         dragBox.updateZoombox(zb, corners, box, path0, dimmed, lum);
         corners.attr('d', dragBox.xyCorners(box));
         dimmed = true;
@@ -424,7 +423,7 @@ proto.updateMainDrag = function(fullLayout, polarLayout) {
         updateByViewBox(vb);
     }
 
-    function panDone(dragger, numClicks) {
+    function panDone(dragged, numClicks) {
         if(dragged) {
             updateByViewBox([0, 0, pw, ph]);
         } else if(numClicks === 2) {
@@ -438,18 +437,22 @@ proto.updateMainDrag = function(fullLayout, polarLayout) {
 
     function updateByViewBox(vb) {
         var ax = _this.xaxis;
-        var xScaleFactor = vb[2] / _this.ax._length;
-        var yScaleFactor = vb[3] / _this.ax._length;
-        var clipDx;
-        var clipDy;
+        var xScaleFactor = vb[2] / ax._length;
+        var yScaleFactor = vb[3] / ax._length;
+        var clipDx = vb[0];
+        var clipDy =  vb[1];
 
         var plotDx = ax._offset - clipDx / xScaleFactor;
         var plotDy = ax._offset - clipDy / yScaleFactor;
 
         _this.framework
-            .call(Drawing.setTranslate, plotDx, plotDy)
-            .call(Drawing.setScale, 1 / xScaleFactor, 1 / yScaleFactor);
+            .call(Drawing.setTranslate, -plotDx, -plotDy)
+//             .call(Drawing.setScale, 1 / xScaleFactor, 1 / yScaleFactor);
 
+        _this.clipPaths.rect
+            .call(Drawing.setTranslate, plotDx, plotDy);
+
+        return
         // maybe cache this at the plot step
         var traceGroups = _this.framework.selectAll('.trace');
 
@@ -512,14 +515,17 @@ proto.updateRadialDrag = function(fullLayout, polarLayout) {
     var _this = this;
     var gd = _this.gd;
     var layers = _this.layers;
-    var radialDrag = dragBox.makeDragger(layers, 'radialdrag', 'move', 0, 0, 50, 50);
+    var radius = _this.diameter / 2;
+    var angle = _this.radialAxisAngle / 180 * Math.PI;
+    var bl = 50;
+    var bl2 = bl / 2;
+    var radialDrag = dragBox.makeDragger(layers, 'radialdrag', 'move', -bl2, -bl2, bl, bl);
     var radialDrag3 = d3.select(radialDrag);
     var dragOpts = {element: radialDrag, gd: gd};
 
-    radialDrag3.attr('transform',
-        'translate(' + (_this.xOffset + _this.xLength / 2) + ',' + (_this.yOffset - 25) + ')');
-
-    var r0, angle0;
+    var bx = _this.cx + (radius + bl2) * Math.cos(angle);
+    var by = _this.cy - (radius + bl2) * Math.sin(-angle);
+    radialDrag3.attr('transform', 'translate(' + bx + ',' + by + ')');
 
     function rerangePrep(evt, startX, startY) {
         r0 = startX;
@@ -535,29 +541,39 @@ proto.updateRadialDrag = function(fullLayout, polarLayout) {
 
     }
 
-    function rotatePrep() {
+    var x0, y0, r;
 
+    function rotatePrep(evt, startX, startY) {
+        x0 = startX - _this.cx;
+        y0 = startY - _this.cy;
     }
 
-    function rotateMove(dx0, dy0) {
-        var angle = Math.atan2(dy0, dx0) / Math.PI * 180;
-        console.log(dx0, dy0, angle, angle0)
+    function rotateMove(dx, dy) {
+        var x1 = _x1 - bx;
+        var y1 = _y1 - by;
+        var r = Math.sqrt(x1 * x1, y1 * y1);
+        var angle = Math.atan2(y1, x1) / Math.PI * 180;
+
+//         console.log([_x1, _y1], [_this.cx, _this.cy], [x1, y1], angle)
+
         _this.framework.attr('transform',
-            'rotate('+ angle + ',' + _this.xOffset + ',' + _this.yOffset + ')');
+            'rotate('+ angle + ',' + _this.cx + ',' + _this.cy + ')');
     };
 
     function rotateDone(dragged) {
         _this.framework.attr('transform', null);
+
+//         var updateObj = {};
+//         updateObj[_this.id + '.radialaxis.range[1]'] = 
+//         Plotly.relayout(gd, )
     };
 
     dragOpts.prepFn = function(evt, startX, startY) {
-        angle0 = Math.atan2(startY, startX) / Math.PI * 180;
-
 //         rerangePrep(evt, startX, startY);
 //         dragOpts.moveFn = rerangeMove;
 //         dragOpts.doneFn = rerangeDone;
 
-        rotatePrep();
+        rotatePrep(evt, startX, startY);
         dragOpts.moveFn = rotateMove;
         dragOpts.doneFn = rotateDone;
 

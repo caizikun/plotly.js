@@ -125,8 +125,8 @@ module.exports = {
         categoryarray: axesAttrs.categoryarray,
         calendar: axesAttrs.calendar,
 
-        // or angle, angleoffset? (but should support any data coordinate system)
-        position: {
+        // or position, angleoffset? (but should support any data coordinate system)
+        angle: {
             valType: 'any',
             editType: 'plot',
             role: 'info',
@@ -249,6 +249,7 @@ module.exports = {
         valType: 'enumerated',
         values: ['clockwise', 'counterclockwise'],
         role: 'info',
+        editType: 'plot',
         description: [
             'Sets the direction corresponding to positive angles.'
         ].join(' ')
@@ -257,9 +258,11 @@ module.exports = {
     // used to be 'orientation' in legacy polar
     rotation: {
         valType: 'angle',
+        dflt: 0,
+        editType: 'plot',
         role: 'info',
         description: [
-            'Rotates the entire polar by the given angle.'
+            'Rotates the entire polar by the given angle (in degree between -180 and 180).'
         ].join(' ')
     },
 

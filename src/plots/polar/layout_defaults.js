@@ -41,6 +41,8 @@ function handleDefaults(contIn, contOut, coerce, opts) {
     coerce('zoom');
     coerce('bgcolor');
 
+    coerce('rotation');
+
     // could optimize, subplotData is not always needed!
     var subplotData = Plots.getSubplotData(opts.fullData, constants.name, opts.id);
     var layoutOut = opts.layoutOut;
@@ -83,6 +85,7 @@ function handleDefaults(contIn, contOut, coerce, opts) {
                 coerceAxis('range');
                 axOut.cleanRange();
 
+                coerceAxis('angle');
                 coerceAxis('side');
                 break;
             case 'angularaxis':

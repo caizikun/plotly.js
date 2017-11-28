@@ -685,6 +685,7 @@
       "bgcolor": "rgb(255, 255, 255)",
       "orientation": -90
     },
-    "paper_bgcolor": "rgb(255, 255, 255)"
+    "paper_bgcolor": "rgb(255, 255, 255)",
+    "dragmode": "pan"
   }
 }
