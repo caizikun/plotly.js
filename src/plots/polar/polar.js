@@ -206,27 +206,38 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     yaxis.setScale();
     yaxis.isPtWithinRange = function() { return true; };
 
+    // TODO might NOT need to extend layout axes into new object for subplot instance
+
     var radialAxis = _this.radialaxis = Lib.extendFlat({}, radialLayout, {
         _axislayer: layers.radialaxis,
         _gridlayer: layers.radialaxisgrid,
         // make this an 'x' axis to make positioning (especially rotation) easier
         _id: 'x',
+        _pos: 0,
         // radialaxis uses 'top'/'bottom' -> convert to 'x' axis equivalent
         // TODO does not work!!
         side: {left: 'top', right: 'bottom'}[radialLayout.side],
         // spans 1/2 of the polar subplot
         domain: [polarLayout.x, xDomain2[1]],
-        _length: radius / gs.w,
-        _pos: 0,
+
         // dummy truthy value to make Axes.doTicks draw the grid
-        _counteraxis: true,
-        _gridpath: function(d) {
-            var r = radialAxis.c2p(d.x);
-            return pathCircle(r);
-        }
+        _counteraxis: true
     });
     Axes.setConvert(radialAxis, fullLayout);
     radialAxis.setScale();
+    //
+    radialAxis._datafn = function(d) {
+        return [d.text, radialAxis.c2p(d.x), radialLayout.side].join('_');
+    };
+    //
+    radialAxis._gridpath = function(d) {
+        var r = radialAxis.c2p(d.x);
+        return pathCircle(r);
+    };
+    // TODO we should need to do this
+    // why does the custom keyfn does not work??
+    layers.radialaxisgrid.selectAll('path').remove();
+    layers.radialaxis.selectAll('.xtick').remove();
     Axes.doTicks(gd, radialAxis, true);
 
     // TODO maybe radial axis should be above frontplot ??
@@ -235,8 +246,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     var radialAxisAngle = _this.radialAxisAngle = radialLayout.angle === undefined ? 
         0 : 
         -radialLayout.angle;
-
-    var radialTransform = 'translate(' + cx + ',' + cy + ')rotate(' + radialAxisAngle + ')';
+    var radialTransform = stringTransform(cx, cy, radialAxisAngle);
 
     layers.radialaxis.attr('transform', radialTransform);
     layers.radialaxisgrid
@@ -254,38 +264,103 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     .call(Color.stroke, radialLayout.linecolor);
 
     var angularAxis = _this.angularaxis = Lib.extendFlat({}, angularLayout, {
+        // .. !!! ...
+        _id: 'angular',
         _axislayer: layers.angularaxis,
         _gridlayer: layers.angularaxisgrid,
-        // convert start / period to range
-        // use gradians for angles to get rounds numbers
-        // ... but need to remove first/last tick
-        range: [0, 399],
-        //
-        _id: 'x',
-        side: 'bottom',
-        // dummy
-        domain: [0, 1],
-        _length: radius,
+        // to get auto nticks right!
+        domain: [0, Math.PI],
+//         range: [0, 360],
+        // ...
+        side: 'right',
+        zeroline: false,
         _pos: 0,
-        // TODO maybe??
-        _transfn: function() {},
+
+        // dummy truthy value to make Axes.doTicks draw the grid
+        _counteraxis: true
     });
     Axes.setConvert(angularAxis, fullLayout);
     angularAxis.setScale();
-    Axes.doTicks(gd, angularAxis, true);
-
-    function positionTick(d) {
-        var r = rRange[1];
-        var theta = d.x / 200 * Math.PI;
+    var x2rad = angularAxis.x2rad = function(v) {
+        if(angularAxis.type === 'category') {
+            return v * 2 * Math.PI / angularAxis._categories.length;
+        } else if(angularAxis.type === 'date') {
+			var period = angularAxis.period || 365 * 24 * 60 * 60 * 1000;
+			return (v % period) * 2 * Math.PI / period;
+        }
+        return v / 180 * Math.PI;
+    }
+    angularAxis._transfn = function(d) {
+        var r = radialAxis.range[1];
+        var theta = -x2rad(d.x);
         var x = cx + radialAxis.c2p(r * Math.cos(theta));
         var y = cy + radialAxis.c2p(r * Math.sin(theta));
         return 'translate(' + x + ',' + y + ')';
-    }
+    };
+    angularAxis._gridpath = function(d) { 
+        var r = radialAxis.range[1];
+        var theta = -x2rad(d.x);
+        var x = radialAxis.c2p(r * Math.cos(theta));
+        var y = radialAxis.c2p(r * Math.sin(theta));
+        return 'M0,0L' + [-x, -y];
+    };
+    Axes.doTicks(gd, angularAxis, true);
 
-    layers.angularaxis.selectAll('path.xtick').attr('transform', positionTick);
-    layers.angularaxis.selectAll('.xtick > text')
-        .attr('transform', positionTick)
-        .text(function(d) { return d.text / 400 * 360; });
+    layers.angularaxis.selectAll('path.angulartick.ticks')
+        .attr('transform', function(d) {
+            var baseTransform = d3.select(this).attr('transform');
+            var angle = d.x;
+            if(angularLayout.type !== 'linear') {
+                angle = x2rad(angle) / Math.PI * 180;
+            }
+            return baseTransform + 'rotate(' + -angle + ')';
+        });
+
+//     layers.angularaxis.selectAll('g.ytick > text')
+//         .attr('transform', function(d) {
+//             var baseTransform = d3.select(this).attr('transform');
+//             var angle = d.x / 400 * 360;
+//             return baseTransform + 'rotate(' + angle + ')';
+//         });
+
+//     layers.angularaxis.selectAll('g.ytick')
+//         .attr('transform', function(d) {
+//             var r = radialAxis.range[1];
+//             var theta = d.x / 200 * Math.PI;
+//             var x = cx + radialAxis.c2p(r * Math.cos(theta));
+//             var y = cy + radialAxis.c2p(r * Math.sin(theta));
+//             var angle = d.x / 400 * 360;
+//             return 'rotate(' + [angle, x, y].join(',') + ')';
+//         });
+
+//     layers.angularaxis.selectAll('.angulartick > text')
+//         .text(function(d) { return d.text / 400 * 360; })
+//         .each(function(d) {
+//             var el = d3.select(this);
+//             var theta = d.x / 200 * Math.PI;
+//             var x = el.attr('x');
+//             var y = el.attr('y');
+// 
+//             el.attr('tra')
+// 
+//             el.attr('x', x * Math.cos(theta));
+//             el.attr('y', y * Math.sin(theta));
+//         })
+
+//     layers.angularaxis.selectAll('.ytick > text')
+//         .text(function(d) { return d.text / 400 * 360; })
+//         .attr('x', null)
+//         .attr('y', null)
+//         .attr('transform', function(d) {
+//             var r = radialAxis.range[1];
+//             var theta = d.x / 200 * Math.PI;
+//             var ticklen = angularLayout.ticklen || 0;
+// 
+//             return stringTransform(
+//                 cx + radialAxis.c2p(r * Math.cos(theta)) + ticklen * Math.cos(theta),
+//                 cy + radialAxis.c2p(r * Math.sin(theta)) + ticklen * Math.sin(theta)
+//             );
+//         });
 
     layers.angularline.attr({
         display: angularLayout.showline ? null : 'none',
@@ -311,6 +386,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         r: radius
     });
 
+    // TODO do we need this?
     _this.clipPaths.rect.attr({
         x: xOffset,
         y: yOffset,
@@ -587,4 +663,10 @@ proto.updateRadialDrag = function(fullLayout, polarLayout) {
 
 function pathCircle(r) {
     return Drawing.symbolFuncs[0](r);
+}
+
+function stringTransform(x, y, angle) {
+    var str = 'translate(' + x + ',' + y + ')';
+    if(angle) str += 'rotate(' + angle + ')';
+    return str;
 }

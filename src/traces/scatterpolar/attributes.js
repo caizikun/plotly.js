@@ -40,7 +40,7 @@ module.exports = {
     thetaunit: {
         valType: 'enumerated',
         values: ['radians', 'degrees', 'gradians'],
-        dflt: 'radians',
+        dflt: 'degrees',
         role: 'info',
         editType: 'calc+clearAxisTypes',
         description: 'Sets the unit of input *theta* values.'

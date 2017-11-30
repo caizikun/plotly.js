@@ -130,7 +130,8 @@
       "mode": "lines",
       "name": "Figure8",
       "line": {
-        "color": "peru"
+        "color": "peru",
+        "shape": "spline"
       },
       "type": "scatterpolar"
     },
@@ -264,7 +265,8 @@
       "mode": "lines",
       "name": "Cardioid",
       "line": {
-        "color": "darkviolet"
+        "color": "darkviolet",
+        "shape": "spline"
       },
       "type": "scatterpolar"
     },
@@ -398,7 +400,8 @@
       "mode": "lines",
       "name": "Hypercardioid",
       "line": {
-        "color": "deepskyblue"
+        "color": "deepskyblue",
+        "shape": "spline"
       },
       "type": "scatterpolar"
     },
@@ -532,7 +535,8 @@
       "mode": "lines",
       "name": "Subcardioid",
       "line": {
-        "color": "orangered"
+        "color": "orangered",
+        "shape": "spline"
       },
       "type": "scatterpolar"
     },
@@ -666,7 +670,8 @@
       "mode": "lines",
       "name": "Supercardioid",
       "line": {
-        "color": "green"
+        "color": "green",
+        "shape": "spline"
       },
       "type": "scatterpolar"
     }
@@ -683,7 +688,19 @@
     "margin": {"l": 40, "r": 40, "b": 20, "t": 40, "pad": 0},
     "polar": {
       "bgcolor": "rgb(255, 255, 255)",
-      "orientation": -90
+      "radialaxis": {
+        "range": [0, 1.1],
+        "side": "right",
+        "tickangle": 45,
+        "tick0": 0,
+        "dtick": 0.1
+      },
+      "angularaxis": {
+        "thetaunit": "radians",
+        "showgrid": true,
+        "tickwidth": 2,
+        "ticklen": 5
+      }
     },
     "paper_bgcolor": "rgb(255, 255, 255)",
     "dragmode": "pan"

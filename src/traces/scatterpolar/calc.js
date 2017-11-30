@@ -10,6 +10,7 @@
 'use strict';
 
 var isNumeric = require('fast-isnumeric');
+var BADNUM = require('../../constants/numerical').BADNUM;
 
 var Lib = require('../../lib');
 var Axes = require('../../plots/cartesian/axes');
@@ -19,48 +20,80 @@ var calcColorscale = require('../scatter/colorscale_calc');
 var arraysToCalcdata = require('../scatter/arrays_to_calcdata');
 var calcSelection = require('../scatter/calc_selection');
 
-var toRadians = {
-    radians: Lib.identity,
+var toRadConverters = {
     degrees: function(v) { return v / 180 * Math.PI; },
-    gradians: function(v) { return v / 200 * Math.PI;  }
+    gradians: function(v) { return v / 200 * Math.PI; },
+    radians: Number
 };
 
 module.exports = function calc(gd, trace) {
     var fullLayout = gd._fullLayout;
-    var rAxis = fullLayout[trace.subplot].radialaxis;
-    var rArray = rAxis.makeCalcdata(trace, 'r');
+    var subplotId = trace.subplot;
+    var radialAxis = fullLayout[subplotId].radialaxis;
+    var angularAxis = fullLayout[subplotId].angularaxis;
+    var rArray = radialAxis.makeCalcdata(trace, 'r');
+    var thetaArray = angularAxis.makeCalcdata(trace, 'theta');
     var len = rArray.length;
     var cd = new Array(len);
 
-    // TODO we'll need a makeCalcdata step here
+    // TODO gotta incorporate polar.direction, polar.rotation
+    var theta2rad;
 
-    var theta2radians = toRadians['degrees'];
+    switch(angularAxis.type) {
+        case 'linear':
+            theta2rad = toRadConverters[trace.thetaunit];
+            break;
+        case 'category':
+            theta2rad = function(v) {
+                return v * 2 * Math.PI / angularAxis._categories.length;
+            };
+            break;
+        case 'date':
+            var period = angularAxis.period || 365 * 24 * 60 * 60 * 1000;
+            theta2rad = function(v) {
+                return (v % period) * 2 * Math.PI / period;
+            };
+            break;
+    }
 
     for(var i = 0; i < len; i++) {
         var r = rArray[i];
-        var theta = trace.theta[i];
+        var theta = thetaArray[i];
         var cdi = cd[i] = {};
 
         if(isNumeric(r) && isNumeric(theta)) {
-            r = cdi.r = +r;
-            theta = cdi.theta = +theta2radians(theta);
+            cdi.r = r;
+            cdi.theta = theta;
 
-            cdi.x = r * Math.cos(theta);
-            cdi.y = r * Math.sin(theta);
+            var thetaInRad = theta2rad(theta);
+            cdi.x = r * Math.cos(thetaInRad);
+            cdi.y = r * Math.sin(thetaInRad);
         } else {
-            cdi.x = false;
-            cdi.y = false;
+            cdi.x = BADNUM;
+            cdi.y = BADNUM;
         }
     }
 
     // TODO ...
     // otherwise set by setScale which requires a domain
-    rAxis._m = 1;
-    rAxis._length = 100;
-    Axes.expand(rAxis, rArray, {tozero: true});
+    radialAxis._m = 1;
+    radialAxis._length = 100;
+    Axes.expand(radialAxis, rArray, {tozero: true});
+
+    // TODO
+    if(angularAxis.type === 'date') {
+        angularAxis.autorange = true;
+        angularAxis._m = 1;
+        angularAxis._length = 100;
+        Axes.expand(angularAxis, thetaArray);
+    }
+
+    // Axes.expand(angularAxis
 
     // TODO Dry up with other scatter* traces!
     // fill in some extras
+    //
+    // TODO needs to bump auto ranges !!!
     var marker, s;
     if(subTypes.hasMarkers(trace)) {
         // Treat size like x or y arrays --- Run d2c

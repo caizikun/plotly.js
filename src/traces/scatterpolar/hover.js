@@ -31,14 +31,17 @@ module.exports = function hoverPoints(pointData, xval, yval, hovermode) {
     var parts = hoverinfo.split('+');
     var text = [];
 
+    // TODO must handle case where subplot and trace *thetaunit* differ
+
     function textPart(ax, val) {
         text.push(ax._hovertitle + ': ' + Axes.tickText(ax, val, 'hover').text);
     }
 
     var fullLayout = subplot.gd._fullLayout;
-    var radialaxis = fullLayout.polar.radialaxis;
+    var subplotId = subplot.id;
+    var radialaxis = fullLayout[subplotId].radialaxis;
     radialaxis._hovertitle = 'r'
-    var angularaxis = fullLayout.polar.angularaxis;
+    var angularaxis = fullLayout[subplotId].angularaxis;
     angularaxis._hovertitle = 'θ';
 
     if(parts.indexOf('all') !== -1) parts = ['r', 'theta'];

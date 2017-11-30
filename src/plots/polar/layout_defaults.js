@@ -57,6 +57,8 @@ function handleDefaults(contIn, contOut, coerce, opts) {
 
         var axIn = contIn[axName] || {};
         var axOut = contOut[axName] = {};
+        axOut._name = axName;
+
         var dataAttr = constants.axisName2dataArray[axName];
         var axType = handleAxisTypeDefaults(axIn, axOut, coerceAxis, subplotData, dataAttr);
 
@@ -71,11 +73,9 @@ function handleDefaults(contIn, contOut, coerce, opts) {
         }
 
         coerceAxis('visible');
-
-        if(axOut.visible) {
-            handleAxisStyleDefaults(axIn, axOut, coerceAxis, opts);
-            setConvert(axOut, layoutOut);
-        }
+        if(!axOut.visible) continue;
+    
+        setConvert(axOut, layoutOut);
 
         switch(axName) {
             case 'radialaxis':
@@ -89,11 +89,20 @@ function handleDefaults(contIn, contOut, coerce, opts) {
                 coerceAxis('side');
                 break;
             case 'angularaxis':
-                coerceAxis('start');
-                coerceAxis('period');
+                if(axType === 'linear') {
+                    coerceAxis('thetaunit');
+                    axOut.autorange = false;
+                    axOut.range = [0, 360];
+                } else {
+                    // TODO we need an ~~autorange attribute for start/period
+                    coerceAxis('start');
+                    coerceAxis('period');
+                }
+
                 break;
         }
 
+        handleAxisStyleDefaults(axIn, axOut, coerceAxis, opts);
         axOut._input = axIn;
     }
 }
@@ -130,8 +139,11 @@ function handleAxisStyleDefaults(axIn, axOut, coerce, opts) {
     var dfltColor = coerce('color');
     var dfltFontColor = (dfltColor === axIn.color) ? dfltColor : opts.font.color;
 
-    handleTickValueDefaults(axIn, axOut, coerce, 'linear');
-    handleTickLabelDefaults(axIn, axOut, coerce, 'linear', {noHover: false});
+    handleTickValueDefaults(axIn, axOut, coerce, axOut.type);
+    handleTickLabelDefaults(axIn, axOut, coerce, axOut.type, {
+        noHover: false,
+        tickSuffixDflt: axOut.thetaunit === 'degrees' ? '°' : undefined
+    });
     handleTickMarkDefaults(axIn, axOut, coerce, {outerTicks: true});
 
     var showTickLabels = coerce('showticklabels');

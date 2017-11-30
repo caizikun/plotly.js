@@ -765,6 +765,9 @@ axes.calcTicks = function calcTicks(ax) {
                 minPx = ax._id.charAt(0) === 'y' ? 40 : 80;
                 nt = Lib.constrain(ax._length / minPx, 4, 9) + 1;
             }
+
+            // radial axes ...
+            if(ax._name === 'radialaxis') nt *= 2;
         }
 
         // add a couple of extra digits for filling in ticks when we
@@ -817,6 +820,12 @@ axes.calcTicks = function calcTicks(ax) {
         xPrevious = x;
 
         vals.push(x);
+    }
+
+
+    if(ax._id === 'angular' && ax.type === 'linear') {
+        // and if same angle ...
+        vals.pop();
     }
 
     // save the last tick as well as first, so we can
@@ -886,7 +895,9 @@ var roundBase10 = [2, 5, 10],
     // approx. tick positions for log axes, showing all (1) and just 1, 2, 5 (2)
     // these don't have to be exact, just close enough to round to the right value
     roundLog1 = [-0.046, 0, 0.301, 0.477, 0.602, 0.699, 0.778, 0.845, 0.903, 0.954, 1],
-    roundLog2 = [-0.301, 0, 0.301, 0.699, 1];
+    roundLog2 = [-0.301, 0, 0.301, 0.699, 1],
+    // ..
+    roundAngles = [15, 30, 45, 90, 180];
 
 function roundDTick(roughDTick, base, roundingSet) {
     return base * Lib.roundUp(roughDTick / base, roundingSet);
@@ -911,6 +922,10 @@ function roundDTick(roughDTick, base, roundingSet) {
 axes.autoTicks = function(ax, roughDTick) {
     var base;
 
+    function getBase(v) {
+        return Math.pow(v, Math.floor(Math.log(roughDTick) / Math.LN10));
+    }
+
     if(ax.type === 'date') {
         ax.tick0 = Lib.dateTick0(ax.calendar);
         // the criteria below are all based on the rough spacing we calculate
@@ -919,7 +934,7 @@ axes.autoTicks = function(ax, roughDTick) {
 
         if(roughX2 > ONEAVGYEAR) {
             roughDTick /= ONEAVGYEAR;
-            base = Math.pow(10, Math.floor(Math.log(roughDTick) / Math.LN10));
+            base = getBase(10);
             ax.dtick = 'M' + (12 * roundDTick(roughDTick, base, roundBase10));
         }
         else if(roughX2 > ONEAVGMONTH) {
@@ -944,7 +959,7 @@ axes.autoTicks = function(ax, roughDTick) {
         }
         else {
             // milliseconds
-            base = Math.pow(10, Math.floor(Math.log(roughDTick) / Math.LN10));
+            base = getBase(10);
             ax.dtick = roundDTick(roughDTick, base, roundBase10);
         }
     }
@@ -963,7 +978,7 @@ axes.autoTicks = function(ax, roughDTick) {
             // ticks on a linear scale, labeled fully
             roughDTick = Math.abs(Math.pow(10, rng[1]) -
                 Math.pow(10, rng[0])) / nt;
-            base = Math.pow(10, Math.floor(Math.log(roughDTick) / Math.LN10));
+            base = getBase(10);
             ax.dtick = 'L' + roundDTick(roughDTick, base, roundBase10);
         }
         else {
@@ -977,10 +992,15 @@ axes.autoTicks = function(ax, roughDTick) {
         ax.tick0 = 0;
         ax.dtick = Math.ceil(Math.max(roughDTick, 1));
     }
+    else if(ax._id === 'angular') {
+        ax.tick0 = 0;
+        base = getBase(1);
+        ax.dtick = roundDTick(roughDTick, base, roundAngles);
+    }
     else {
         // auto ticks always start at 0
         ax.tick0 = 0;
-        base = Math.pow(10, Math.floor(Math.log(roughDTick) / Math.LN10));
+        base = getBase(10);
         ax.dtick = roundDTick(roughDTick, base, roundBase10);
     }
 
@@ -1208,6 +1228,7 @@ axes.tickText = function(ax, x, hover) {
     if(ax.type === 'date') formatDate(ax, out, hover, extraPrecision);
     else if(ax.type === 'log') formatLog(ax, out, hover, extraPrecision, hideexp);
     else if(ax.type === 'category') formatCategory(ax, out);
+    else if(ax.type === 'linear' && ax._id === 'angular') formatAngle(ax, out, hover, extraPrecision, hideexp);
     else formatLinear(ax, out, hover, extraPrecision, hideexp);
 
     // add prefix and suffix
@@ -1400,6 +1421,66 @@ function formatLinear(ax, out, hover, extraPrecision, hideexp) {
         hideexp = 'hide';
     }
     out.text = numFormat(out.x, ax, hideexp, extraPrecision);
+}
+
+function formatAngle(ax, out, hover, extraPrecision, hideexp) {
+    if(ax.thetaunit === 'radians') {
+        var isNeg = out.x < 0;
+        var num = out.x / 180;
+
+        if(num === 0) {
+            out.text = '0';
+        } else {
+            var frac = num2frac(num);
+            
+            if(frac[1] === 1) {
+                if(frac[0] === 1) out.text = 'π';
+                else out.text = frac[0] + 'π';
+            } else {
+                out.text =  [
+                    '<sup>', frac[0], '</sup>',
+                    '⁄',
+                    '<sub>', frac[1], '</sub>',
+                    'π'
+                ].join('')
+            }
+        }
+        
+        if(isNeg) out.text = MINUS_SIGN + out.text;
+    } else {
+        out.text = numFormat(out.x, ax, hideexp, extraPrecision);
+    }
+}
+
+// inspired by 
+// https://github.com/yisibl/num2fraction/blob/master/index.js
+function num2frac(num) {
+    function almostEq(a, b) {
+        return Math.abs(a - b) <= 9.5367432e-7
+    }
+
+    function GCD(a, b) {
+        return almostEq(b, 0) ? a : GCD(b, a % b);
+    }
+
+    function findPrecision(n) {
+      var e = 1;
+      while(!almostEq(Math.round(n * e) / e, n)) {
+        e *= 10
+      }
+      return e;
+    }
+
+    var precision = findPrecision(num)
+    var number = num * precision
+    var gcd = Math.abs(GCD(number, precision))
+
+    return [
+        // numerator
+        Math.round(number / gcd),
+        // denominator
+        Math.round(precision / gcd)
+    ];
 }
 
 // format a number (tick value) according to the axis settings
@@ -1820,7 +1901,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
     var axLetter = axid.charAt(0),
         counterLetter = axes.counterLetter(axid),
         vals = axes.calcTicks(ax),
-        datafn = function(d) { return [d.text, d.x, ax.mirror].join('_'); },
+        datafn = ax._datafn || function(d) { return [d.text, d.x, ax.mirror].join('_'); },
         tcls = axid + 'tick',
         gcls = axid + 'grid',
         zcls = axid + 'zl',
@@ -1846,7 +1927,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
     // positioning arguments for x vs y axes
     if(axLetter === 'x') {
         sides = ['bottom', 'top'];
-        transfn = function(d) {
+        transfn = ax._transfn || function(d) {
             return 'translate(' + ax.l2p(d.x) + ',0)';
         };
         tickpathfn = function(shift, len) {
@@ -1859,7 +1940,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
     }
     else if(axLetter === 'y') {
         sides = ['left', 'right'];
-        transfn = function(d) {
+        transfn = ax._transfn || function(d) {
             return 'translate(0,' + ax.l2p(d.x) + ')';
         };
         tickpathfn = function(shift, len) {
@@ -1870,10 +1951,18 @@ axes.doTicks = function(gd, axid, skipTitle) {
             else return 'M' + shift + ',0h' + len;
         };
     }
+    else if(axid === 'angular') {
+        sides = ['left', 'right'];
+        transfn = ax._transfn;
+        tickpathfn = function(shift, len) {
+            return 'M' + shift + ',0h' + len;
+        };
+    }
     else {
         Lib.warn('Unrecognized doTicks axis:', axid);
         return;
     }
+
     var axside = ax.side || sides[0],
     // which direction do the side[0], side[1], and free ticks go?
     // then we flip if outside XOR y axis
@@ -1892,6 +1981,11 @@ axes.doTicks = function(gd, axid, skipTitle) {
         return (p > 1 && p < ax._length - 1);
     }
     var valsClipped = vals.filter(clipEnds);
+
+    // ...
+    if(ax._id === 'angular') {
+        valsClipped = vals;
+    }
 
     function drawTicks(container, tickpath) {
         var ticks = container.selectAll('path.' + tcls)
@@ -1925,15 +2019,30 @@ axes.doTicks = function(gd, axid, skipTitle) {
             return;
         }
 
-        var labelx, labely, labelanchor, labelpos0, flipit;
+        var labelx, labely, labelanchor, flipit;
+
+        function xLabelx(d) {
+            return d.dx + labelShift * flipit;
+        };
+
+        function xLabely(d) {
+            return d.dy + position + (labelStandoff + pad) * flipit +
+                d.fontSize * ((axside === 'bottom') ? 1 : -0.2);
+        }
+
+        function yLabelx(d) {
+            return d.dx + position + (labelStandoff + pad +
+                ((Math.abs(ax.tickangle) === 90) ? d.fontSize / 2 : 0)) * flipit;
+        }
+
+        function yLabely(d) {
+            return d.dy + d.fontSize * MID_SHIFT - labelShift * flipit;
+        }
+
         if(axLetter === 'x') {
             flipit = (axside === 'bottom') ? 1 : -1;
-            labelx = function(d) { return d.dx + labelShift * flipit; };
-            labelpos0 = position + (labelStandoff + pad) * flipit;
-            labely = function(d) {
-                return d.dy + labelpos0 + d.fontSize *
-                    ((axside === 'bottom') ? 1 : -0.2);
-            };
+            labelx = xLabelx;
+            labely = xLabely;
             labelanchor = function(angle) {
                 if(!isNumeric(angle) || angle === 0 || angle === 180) {
                     return 'middle';
@@ -1941,15 +2050,10 @@ axes.doTicks = function(gd, axid, skipTitle) {
                 return (angle * flipit < 0) ? 'end' : 'start';
             };
         }
-        else {
+        else if(axLetter === 'y'){
             flipit = (axside === 'right') ? 1 : -1;
-            labely = function(d) {
-                return d.dy + d.fontSize * MID_SHIFT - labelShift * flipit;
-            };
-            labelx = function(d) {
-                return d.dx + position + (labelStandoff + pad +
-                    ((Math.abs(ax.tickangle) === 90) ? d.fontSize / 2 : 0)) * flipit;
-            };
+            labelx = yLabelx;
+            labely = yLabely;
             labelanchor = function(angle) {
                 if(isNumeric(angle) && Math.abs(angle) === 90) {
                     return 'middle';
@@ -1957,6 +2061,26 @@ axes.doTicks = function(gd, axid, skipTitle) {
                 return axside === 'right' ? 'start' : 'end';
             };
         }
+        else if(axid === 'angular') {
+            flipit = 1;
+            labelx = function(d) {
+                var theta = ax.x2rad(d.x);
+                return Math.cos(theta) * yLabelx(d) - Math.sin(theta) * xLabelx(d);
+            };
+
+            labely = function(d) {
+                var theta = ax.x2rad(d.x);
+                return Math.cos(theta) * yLabely(d) - Math.sin(theta) * xLabely(d);
+            };
+
+            labelanchor = function(angle, d) {
+                var cosTheta = Math.cos(ax.x2rad(d.x));
+                return cosTheta > 0 ? 'start' :
+                    cosTheta < 0 ? 'end' :
+                    'middle';
+            };
+        }
+
         var maxFontSize = 0,
             autoangle = 0,
             labelsReady = [];
@@ -1996,7 +2120,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
 
         function positionLabels(s, angle) {
             s.each(function(d) {
-                var anchor = labelanchor(angle);
+                var anchor = labelanchor(angle, d);;
                 var thisLabel = d3.select(this),
                     mathjaxGroup = thisLabel.select('.text-math-group'),
                     transform = transfn(d) +
@@ -2276,6 +2400,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
                 'M0,0' + ((axLetter === 'x') ? 'v' : 'h') + counteraxis._length,
             grid = gridcontainer.selectAll('path.' + gcls)
                 .data((ax.showgrid === false) ? [] : gridvals, datafn);
+
         grid.enter().append('path').classed(gcls, 1)
             .classed('crisp', 1)
             .attr('d', gridpath)

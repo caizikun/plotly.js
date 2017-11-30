@@ -11,6 +11,7 @@
 var colorAttrs = require('../../components/color/attributes');
 var axesAttrs = require('../cartesian/layout_attributes');
 var extendFlat = require('../../lib').extendFlat;
+var overrideAll = require('../../plot_api/edit_types').overrideAll;
 
 var domainItem = {
     valType: 'info_array',
@@ -31,7 +32,7 @@ var positionItem = {
     max: 3
 };
 
-var axisStyleAttrs = {
+var axisStyleAttrs = overrideAll({
     // not sure about these
     // maybe just for radialaxis ??
     // title: axesAttrs.title,
@@ -40,7 +41,7 @@ var axisStyleAttrs = {
     visible: extendFlat({}, axesAttrs.visible, {dflt: true}),
     color: axesAttrs.color,
     tickmode: axesAttrs.tickmode,
-    nticks: extendFlat({}, axesAttrs.nticks, {dflt: 6, min: 1}),
+    nticks: axesAttrs.nticks,
     tick0: axesAttrs.tick0,
     dtick: axesAttrs.dtick,
     tickvals: axesAttrs.tickvals,
@@ -78,7 +79,7 @@ var axisStyleAttrs = {
     // might be useful on radial axes where range is negative and positive
 
     // we could add spike* attributes down the road
-};
+}, 'plot', 'from-root');
 
 module.exports = {
     x: extendFlat({}, positionItem, {
@@ -99,6 +100,7 @@ module.exports = {
         dflt: 1,
         description: ''
     },
+
     domain: {
         x: extendFlat({}, domainItem, {
             description: [
@@ -192,7 +194,7 @@ module.exports = {
             valType: 'any',
             // similar to tick0
 
-            // defaults to 2*pi for linear
+            // defaults to 0 for linear
             //
         },
 
@@ -213,8 +215,8 @@ module.exports = {
 
         thetaunit: {
             valType: 'enumerated',
-            values: ['radians', 'degrees', 'gradians'],
-            dflt: 'radians',
+            values: ['radians', 'degrees'],
+            dflt: 'degrees',
             role: 'info',
             editType: 'calc+clearAxisTypes',
             description: [
@@ -233,6 +235,7 @@ module.exports = {
         //
         // maybe something like (to not confuse)
         // span: {},
+        // polar.span: {} (at root level)
 
         editType: 'calc'
     }, axisStyleAttrs),

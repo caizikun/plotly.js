@@ -79,6 +79,5 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
     }
     coerce('hoveron', dfltHoverOn.join('+') || 'points');
 
-
     Lib.coerceSelectionMarkerOpacity(traceOut, coerce);
 };
