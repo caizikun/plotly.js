@@ -37,11 +37,10 @@ function handleDefaults(contIn, contOut, coerce, opts) {
     var yDomain = contOut.domain.y;
     coerce('x', (xDomain[0] + xDomain[1]) / 2);
     coerce('y', (yDomain[0] + yDomain[1]) / 2);
-
     coerce('zoom');
-    coerce('bgcolor');
-
-    coerce('rotation');
+    
+    // ....
+    coerce('sector');
 
     // could optimize, subplotData is not always needed!
     var subplotData = Plots.getSubplotData(opts.fullData, constants.name, opts.id);
@@ -85,8 +84,8 @@ function handleDefaults(contIn, contOut, coerce, opts) {
                 coerceAxis('range');
                 axOut.cleanRange();
 
-                coerceAxis('angle');
                 coerceAxis('side');
+                coerceAxis('position');
                 break;
             case 'angularaxis':
                 if(axType === 'linear') {
@@ -94,11 +93,11 @@ function handleDefaults(contIn, contOut, coerce, opts) {
                     axOut.autorange = false;
                     axOut.range = [0, 360];
                 } else {
-                    // TODO we need an ~~autorange attribute for start/period
-                    coerceAxis('start');
-                    coerceAxis('period');
+                    coerce('period')
                 }
 
+                coerce('direction');
+                coerce('position')
                 break;
         }
 

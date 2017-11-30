@@ -82,6 +82,7 @@ var axisStyleAttrs = overrideAll({
 }, 'plot', 'from-root');
 
 module.exports = {
+    // TODO might not need this. Cut?
     x: extendFlat({}, positionItem, {
         description: [
             '...'
@@ -117,18 +118,55 @@ module.exports = {
         editType: 'plot'
     },
 
+    // Maybe this should angularaxis.range correspond to
+    // angular span of the drawing area?
+    //
+    // matlab's angular equivalent to 'range' bounds the drawing area
+    // (partial circles as they call it)
+    // https://www.mathworks.com/help/matlab/ref/thetalim.html
+    //
+    // as this attribute would be best set in (absolute) angles,
+    // I think this should be set outside of angularaxis e.g
+    // as polar.sector: [0, 180]
+    sector: {
+        valType: 'info_array',
+        items: [
+            // or be less strict -> `valType: 'number' with `dflt: [0, 360]`
+            {valType: 'angle', editType: 'plot'},
+            {valType: 'angle', editType: 'plot'}
+        ],
+        dflt: [-180, 180],
+        role: 'info',
+        editType: 'plot',
+        description: [
+            'Sets angular span of this polar subplot in '
+        ].join(' ')
+    },
+
+    bgcolor: {
+        valType: 'color',
+        role: 'style',
+        editType: 'style',
+        dflt: colorAttrs.background,
+        description: 'Set the background color of the subplot'
+    },
+
     radialaxis: extendFlat({
         type: axesAttrs.type,
         autorange: axesAttrs.autorange,
-        // might make 'nonnegative' to default
+        // might make 'nonnegative' the default
         rangemode: axesAttrs.rangemode,
         range: axesAttrs.range,
         categoryorder: axesAttrs.categoryorder,
         categoryarray: axesAttrs.categoryarray,
         calendar: axesAttrs.calendar,
 
-        // or position, angleoffset? (but should support any data coordinate system)
-        angle: {
+        // position (analogous to xaxis.position),
+        // or maybe something more specific e.g. angle angleoffset?
+        //
+        // (should this support any data coordinate system?)
+        // maybe it most intuitive to set this as just an angle!
+        position: {
             valType: 'any',
             editType: 'plot',
             role: 'info',
@@ -136,8 +174,10 @@ module.exports = {
                 '...'
             ].join(' ')
         },
+
         side: {
             valType: 'enumerated',
+            // maybe 'clockwise' and 'counterclockwise' would be best here
             values: ['left', 'right'],
             dflt: 'right',
             editType: 'plot',
@@ -162,8 +202,9 @@ module.exports = {
         // to draw donut-like charts
         // e.g. https://github.com/matplotlib/matplotlib/issues/4217
         //
-        // maybe something like
+        // maybe something like 'span' or 'hole' (like pie, but pie set it in data coords)
         // span: {},
+        // hole: 1
 
         // maybe should add a boolean to enable square grid lines
         // and square axis lines
@@ -176,6 +217,9 @@ module.exports = {
     angularaxis: extendFlat({
         type: {
             valType: 'enumerated',
+            // 'linear' should probably be called 'angle' or 'angular' here
+            // to make clear that axis here is periodic.
+            //
             // no 'log' for now
             values: ['-', 'linear', 'date', 'category'],
             dflt: '-',
@@ -190,18 +234,10 @@ module.exports = {
         categoryarray: axesAttrs.categoryarray,
         calendar: axesAttrs.calendar,
 
-        start: {
-            valType: 'any',
-            // similar to tick0
-
-            // defaults to 0 for linear
-            //
-        },
-
         period: {
             valType: 'any'
 
-            // defaults to 2*pi for linear
+            // defaults to 360 / 2*pi for linear
             // and to full range for other types
 
             // similar to dtick
@@ -225,49 +261,41 @@ module.exports = {
             ].join(' ')
         },
 
-        // should angularaxis.range correspond to
-        // angular span of the drawing area?
-        // or the length of the period (i.e. dflt: 360 degree)
+        // we could make the default 'clockwise' for date axes ...
+        direction: {
+            valType: 'enumerated',
+            values: ['counterclockwise', 'clockwise'],
+            dflt: 'counterclockwise',
+            role: 'info',
+            editType: 'plot',
+            description: [
+                'Sets the direction corresponding to positive angles.'
+            ].join(' ')
+        },
+
+        // matlab uses thetaZeroLocation: 'North', 'West', 'East', 'South'
+        // mpl uses set_theta_zero_location('W', offset=10)
         //
-        // matlab's angular equivalent to 'range' bounds the drawing area
-        // (partial circles as they call it)
-        // https://www.mathworks.com/help/matlab/ref/thetalim.html
+        // position is analogous to yaxis.position, but as an angle (going
+        // counterclockwise about cartesian y=0.
         //
-        // maybe something like (to not confuse)
-        // span: {},
-        // polar.span: {} (at root level)
+        // we could maybe make `position: 90` by default for category and date angular axes.
+        position: {
+            valType: 'angle',
+            dflt: 0,
+            editType: 'plot',
+            role: 'info',
+            description: [
+                'Start position (in degree between -180 and 180) of the angular axis',
+                'Note that by default, polar subplots are orientation such that the theta=0',
+                'corresponds to a line pointing right.',
+                'For example to make the angular axis start from the North (like on a compass),'
+
+            ].join(' ')
+        },
 
         editType: 'calc'
     }, axisStyleAttrs),
-
-    bgcolor: {
-        valType: 'color',
-        role: 'style',
-        editType: 'style',
-        dflt: colorAttrs.background,
-        description: 'Set the background color of the subplot'
-    },
-
-    direction: {
-        valType: 'enumerated',
-        values: ['clockwise', 'counterclockwise'],
-        role: 'info',
-        editType: 'plot',
-        description: [
-            'Sets the direction corresponding to positive angles.'
-        ].join(' ')
-    },
-
-    // used to be 'orientation' in legacy polar
-    rotation: {
-        valType: 'angle',
-        dflt: 0,
-        editType: 'plot',
-        role: 'info',
-        description: [
-            'Rotates the entire polar by the given angle (in degree between -180 and 180).'
-        ].join(' ')
-    },
 
     // TODO maybe?
     // annotations:

@@ -45,12 +45,12 @@ function Polar(gd, id) {
 
     this.clipPaths.circle = fullLayout._clips.append('clipPath')
         .attr('id', clipId + '-circle')
-        .append('circle');
+        .append('path');
 
     this.clipPaths.rect = fullLayout._clips.append('clipPath')
         .attr('id', clipId + '-rect')
         .append('rect');
-    
+
     this.framework = fullLayout._polarlayer.append('g')
         .attr('class', id)
 //         .call(Drawing.setClipUrl, clipId + '-rect');
@@ -232,7 +232,8 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     //
     radialAxis._gridpath = function(d) {
         var r = radialAxis.c2p(d.x);
-        return pathCircle(r);
+		return pathSector(r, 0, 180);
+// 		return pathCircle(r);
     };
     // TODO we should need to do this
     // why does the custom keyfn does not work??
@@ -243,8 +244,8 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     // TODO maybe radial axis should be above frontplot ??
 
     // TODO add support for other all supported theta types
-    var radialAxisAngle = _this.radialAxisAngle = radialLayout.angle === undefined ? 
-        0 : 
+    var radialAxisAngle = _this.radialAxisAngle = radialLayout.angle === undefined ?
+        0 :
         -radialLayout.angle;
     var radialTransform = stringTransform(cx, cy, radialAxisAngle);
 
@@ -297,7 +298,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         var y = cy + radialAxis.c2p(r * Math.sin(theta));
         return 'translate(' + x + ',' + y + ')';
     };
-    angularAxis._gridpath = function(d) { 
+    angularAxis._gridpath = function(d) {
         var r = radialAxis.range[1];
         var theta = -x2rad(d.x);
         var x = radialAxis.c2p(r * Math.cos(theta));
@@ -340,9 +341,9 @@ proto.updateLayout = function(fullLayout, polarLayout) {
 //             var theta = d.x / 200 * Math.PI;
 //             var x = el.attr('x');
 //             var y = el.attr('y');
-// 
+//
 //             el.attr('tra')
-// 
+//
 //             el.attr('x', x * Math.cos(theta));
 //             el.attr('y', y * Math.sin(theta));
 //         })
@@ -355,7 +356,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
 //             var r = radialAxis.range[1];
 //             var theta = d.x / 200 * Math.PI;
 //             var ticklen = angularLayout.ticklen || 0;
-// 
+//
 //             return stringTransform(
 //                 cx + radialAxis.c2p(r * Math.cos(theta)) + ticklen * Math.cos(theta),
 //                 cy + radialAxis.c2p(r * Math.sin(theta)) + ticklen * Math.sin(theta)
@@ -380,19 +381,9 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     })
     .call(Color.fill, polarLayout.bgcolor);
 
-    _this.clipPaths.circle.attr({
-        cx: cx - xOffset2,
-        cy: cy - yOffset2,
-        r: radius
-    });
-
-    // TODO do we need this?
-    _this.clipPaths.rect.attr({
-        x: xOffset,
-        y: yOffset,
-        width: xLength,
-        height: yLength
-    });
+    _this.clipPaths.circle
+		.attr('d', pathCircle(radius))
+		.attr('transform', 'translate(' + (cx - xOffset2) + ',' + (cy - yOffset2) + ')');
 };
 
 proto.updateFx = function(fullLayout, polarLayout) {
@@ -410,7 +401,7 @@ proto.updateMainDrag = function(fullLayout, polarLayout) {
     var gs = fullLayout._size;
 
     var mainDrag = dragBox.makeDragger(
-        layers, 'maindrag', 'crosshair', 
+        layers, 'maindrag', 'crosshair',
         _this.xOffset2, _this.yOffset2, _this.diameter, _this.diameter
     );
 
@@ -538,7 +529,7 @@ proto.updateMainDrag = function(fullLayout, polarLayout) {
             .call(Drawing.setTextPointsScale, xScaleFactor, yScaleFactor);
         traceGroups
             .call(Drawing.hideOutsideRangePoints, _this);
-    } 
+    }
 
     function doubleClick() {
         gd.emit('plotly_doubleclick', null);
@@ -640,7 +631,7 @@ proto.updateRadialDrag = function(fullLayout, polarLayout) {
         _this.framework.attr('transform', null);
 
 //         var updateObj = {};
-//         updateObj[_this.id + '.radialaxis.range[1]'] = 
+//         updateObj[_this.id + '.radialaxis.range[1]'] =
 //         Plotly.relayout(gd, )
     };
 
@@ -663,6 +654,27 @@ proto.updateRadialDrag = function(fullLayout, polarLayout) {
 
 function pathCircle(r) {
     return Drawing.symbolFuncs[0](r);
+}
+
+function pathSector(r, start, span) {
+	var start = 0
+	var span = 1 * Math.PI + 0.5
+	span = Math.PI
+	var xs = r * Math.cos(start);
+	var ys = -r * Math.sin(start);
+	var xe = r * Math.cos(start + span);
+	var ye = -r * Math.sin(start + span);
+	var flags = span < Math.PI ? [0, 0, 0] : [0, 1, 1];
+
+	flags = [0,0,0]
+// 	flags = [1,1,1]
+
+	return 'M' + [xs, ys]
+		+ 'A' + [r, r] + ' ' + flags + ' ' + [xe, ye]
+// 	return 'M' + r + ',0'
+// 		+ 'A' + r + ',' + r + ' 0 1,1 ' + (-r) + ',0'
+// 		+ 'A' + r + ',' + r + ' 0 0,1 ' + r + ',0Z';
+
 }
 
 function stringTransform(x, y, angle) {
