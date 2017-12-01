@@ -1,0 +1,15 @@
+{
+  "data": [{
+    "type": "scatterpolar",
+    "r": [1, 2, 3, 4, 5, 2],
+    "theta": [0, 90, 180, 250, 300, 400]
+  }],
+  "layout": {
+    "polar": {
+      "sector": [0, 360],
+      "bgcolor": "#d3d3d3"
+    },
+    "width": 500,
+    "height": 500
+  }
+}

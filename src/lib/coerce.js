@@ -177,6 +177,7 @@ exports.valObjectMeta = {
         description: [
             'A number (in degree) between -180 and 180.'
         ].join(' '),
+        // TODO maybe add option for 0 to 360??
         requiredOpts: [],
         otherOpts: ['dflt'],
         coerceFunction: function(v, propOut, dflt) {

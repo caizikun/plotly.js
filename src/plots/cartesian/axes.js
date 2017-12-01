@@ -823,8 +823,8 @@ axes.calcTicks = function calcTicks(ax) {
     }
 
 
-    if(ax._id === 'angular' && ax.type === 'linear') {
-        // and if same angle ...
+	// and if same angle ...
+    if(ax._id === 'angular' && vals[0] === vals[vals.length - 1] - 360) {
         vals.pop();
     }
 

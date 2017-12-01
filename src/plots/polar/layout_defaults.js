@@ -32,14 +32,7 @@ function handleDefaults(contIn, contOut, coerce, opts) {
     var bgColor = coerce('bgcolor');
     opts.bgColor = Color.combine(bgColor, opts.paper_bgcolor);
 
-    // TODO default should depend on domain (and span eventually)
-    var xDomain = contOut.domain.x;
-    var yDomain = contOut.domain.y;
-    coerce('x', (xDomain[0] + xDomain[1]) / 2);
-    coerce('y', (yDomain[0] + yDomain[1]) / 2);
-    coerce('zoom');
-    
-    // ....
+    // TODO sanitize sector similar to 'range'
     coerce('sector');
 
     // could optimize, subplotData is not always needed!
@@ -96,8 +89,8 @@ function handleDefaults(contIn, contOut, coerce, opts) {
                     coerce('period')
                 }
 
-                coerce('direction');
-                coerce('position')
+                coerceAxis('direction');
+                coerceAxis('position')
                 break;
         }
 

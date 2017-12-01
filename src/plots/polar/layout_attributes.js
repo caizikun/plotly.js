@@ -24,14 +24,6 @@ var domainItem = {
     dflt: [0, 1]
 };
 
-var positionItem = {
-    valType: 'number',
-    role: 'info',
-    editType: 'plot',
-    min: -2,
-    max: 3
-};
-
 var axisStyleAttrs = overrideAll({
     // not sure about these
     // maybe just for radialaxis ??
@@ -82,25 +74,14 @@ var axisStyleAttrs = overrideAll({
 }, 'plot', 'from-root');
 
 module.exports = {
-    // TODO might not need this. Cut?
-    x: extendFlat({}, positionItem, {
-        description: [
-            '...'
-        ].join(' ')
-    }),
-    y: extendFlat({}, positionItem, {
-        description: [
-            '...'
-        ].join(' ')
-    }),
-    zoom: {
-        valType: 'number',
-        role: 'info',
-        editType: 'plot',
-        min: 0,
-        dflt: 1,
-        description: ''
-    },
+    // I thought about a x/y/zoom system for paper-based zooming
+    // but I came to think that sector span + radial axis range
+    // zooming will be better
+    //
+    // TODO confirm with team.
+    // x: {},
+    // y: {},
+    // zoom: {},
 
     domain: {
         x: extendFlat({}, domainItem, {
@@ -131,11 +112,11 @@ module.exports = {
     sector: {
         valType: 'info_array',
         items: [
-            // or be less strict -> `valType: 'number' with `dflt: [0, 360]`
-            {valType: 'angle', editType: 'plot'},
-            {valType: 'angle', editType: 'plot'}
+            // or be more strict -> `valType: 'angle' with `dflt: [0, 360]`
+            {valType: 'number', editType: 'plot'},
+            {valType: 'number', editType: 'plot'}
         ],
-        dflt: [-180, 180],
+        dflt: [0, 360],
         role: 'info',
         editType: 'plot',
         description: [
@@ -170,6 +151,7 @@ module.exports = {
             valType: 'any',
             editType: 'plot',
             role: 'info',
+            dflt: 0,
             description: [
                 '...'
             ].join(' ')
