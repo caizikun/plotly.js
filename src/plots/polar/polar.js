@@ -31,7 +31,6 @@ var MINDRAG = constants.MINDRAG;
 var PI = Math.PI;
 var blankPath = 'M0,0';
 
-var DEBUG = true;
 var DEBUG = false;
 
 function Polar(gd, id) {
@@ -275,24 +274,19 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         // TODO move deeper in doTicks
         tickangle: tickangle,
 
+        // to get _boundingBox computation right when showticklabels is false
+        anchor: 'free',
+        position: 0,
         // dummy truthy value to make Axes.doTicks draw the grid
         _counteraxis: true
     });
     Axes.setConvert(radialAxis, fullLayout);
     radialAxis.setScale();
-    //
-    radialAxis._datafn = function(d) {
-        return [d.text, radialAxis.c2p(d.x), radialLayout.side].join('_');
-    };
-    //
+    // set special grid path function
     radialAxis._gridpath = function(d) {
         var r = radialAxis.c2p(d.x);
         return pathSector(r, sector);
     };
-    // TODO we should need to do this
-    // why does the custom keyfn does not work??
-    layers.radialaxisgrid.selectAll('path').remove();
-    layers.radialaxis.selectAll('.xtick').remove();
     Axes.doTicks(gd, radialAxis, true);
 
     // TODO maybe radial axis should be above frontplot ??
@@ -320,14 +314,16 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         _id: 'angular',
         _axislayer: layers.angularaxis,
         _gridlayer: layers.angularaxisgrid,
+        _pos: 0,
         // to get auto nticks right!
         domain: [0, PI],
         range: sector,
         // ...
         side: 'right',
         zeroline: false,
-        _pos: 0,
-
+        // to get _boundingBox computation right when showticklabels is false
+        anchor: 'free',
+        position: 0,
         // dummy truthy value to make Axes.doTicks draw the grid
         _counteraxis: true
     });
@@ -721,9 +717,7 @@ function wrap360(deg) {
 }
 
 function pathSector(r, sector) {
-    var arc = Math.abs(sector[1] - sector[0]);
-
-    if(arc === 360) {
+    if(isFullCircle(sector)) {
         return Drawing.symbolFuncs[0](r);
     }
 
@@ -732,6 +726,7 @@ function pathSector(r, sector) {
     var xe = r * Math.cos(deg2rad(sector[1]));
     var ye = -r * Math.sin(deg2rad(sector[1]));
 
+    var arc = Math.abs(sector[1] - sector[0]);
     var flags = arc <= 180 ? [0, 0, 0] : [0, 1, 0];
 
     return 'M' + [xs, ys] +
@@ -739,7 +734,13 @@ function pathSector(r, sector) {
 }
 
 function pathSectorClosed(r, sector) {
-    return pathSector(r, sector) + 'L0,0Z';
+    return pathSector(r, sector) +
+        (isFullCircle(sector) ?  '' : 'L0,0Z');
+}
+
+function isFullCircle(sector) {
+    var arc = Math.abs(sector[1] - sector[0]);
+    return arc === 360;
 }
 
 function strTranslate(x, y) {
