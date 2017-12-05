@@ -40,9 +40,11 @@ module.exports = function hoverPoints(pointData, xval, yval, hovermode) {
     var fullLayout = subplot.gd._fullLayout;
     var subplotId = subplot.id;
     var radialaxis = fullLayout[subplotId].radialaxis;
-    radialaxis._hovertitle = 'r'
+    radialaxis._hovertitle = 'r';
     var angularaxis = fullLayout[subplotId].angularaxis;
     angularaxis._hovertitle = 'θ';
+
+    // TODO handle case when theta is outside of polar.sector
 
     if(parts.indexOf('all') !== -1) parts = ['r', 'theta'];
     if(parts.indexOf('r') !== -1) textPart(radialaxis, cdi.r);

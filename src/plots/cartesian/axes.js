@@ -823,7 +823,7 @@ axes.calcTicks = function calcTicks(ax) {
     }
 
 
-	// and if same angle ...
+    // and if same angle ...
     if(ax._id === 'angular' && vals[0] === vals[vals.length - 1] - 360) {
         vals.pop();
     }
@@ -897,6 +897,7 @@ var roundBase10 = [2, 5, 10],
     roundLog1 = [-0.046, 0, 0.301, 0.477, 0.602, 0.699, 0.778, 0.845, 0.903, 0.954, 1],
     roundLog2 = [-0.301, 0, 0.301, 0.699, 1],
     // ..
+//     roundAngles = [1, 2, 5, 10, 15, 30, 45, 90, 180];
     roundAngles = [15, 30, 45, 90, 180];
 
 function roundDTick(roughDTick, base, roundingSet) {
@@ -1432,48 +1433,48 @@ function formatAngle(ax, out, hover, extraPrecision, hideexp) {
             out.text = '0';
         } else {
             var frac = num2frac(num);
-            
+
             if(frac[1] === 1) {
                 if(frac[0] === 1) out.text = 'π';
                 else out.text = frac[0] + 'π';
             } else {
-                out.text =  [
+                out.text = [
                     '<sup>', frac[0], '</sup>',
                     '⁄',
                     '<sub>', frac[1], '</sub>',
                     'π'
-                ].join('')
+                ].join('');
             }
         }
-        
+
         if(isNeg) out.text = MINUS_SIGN + out.text;
     } else {
         out.text = numFormat(out.x, ax, hideexp, extraPrecision);
     }
 }
 
-// inspired by 
+// inspired by
 // https://github.com/yisibl/num2fraction/blob/master/index.js
 function num2frac(num) {
     function almostEq(a, b) {
-        return Math.abs(a - b) <= 9.5367432e-7
+        return Math.abs(a - b) <= 9.5367432e-7;
     }
 
-    function GCD(a, b) {
-        return almostEq(b, 0) ? a : GCD(b, a % b);
+    function findGCD(a, b) {
+        return almostEq(b, 0) ? a : findGCD(b, a % b);
     }
 
     function findPrecision(n) {
-      var e = 1;
-      while(!almostEq(Math.round(n * e) / e, n)) {
-        e *= 10
-      }
-      return e;
+        var e = 1;
+        while(!almostEq(Math.round(n * e) / e, n)) {
+            e *= 10;
+        }
+        return e;
     }
 
-    var precision = findPrecision(num)
-    var number = num * precision
-    var gcd = Math.abs(GCD(number, precision))
+    var precision = findPrecision(num);
+    var number = num * precision;
+    var gcd = Math.abs(findGCD(number, precision));
 
     return [
         // numerator
@@ -2023,7 +2024,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
 
         function xLabelx(d) {
             return d.dx + labelShift * flipit;
-        };
+        }
 
         function xLabely(d) {
             return d.dy + position + (labelStandoff + pad) * flipit +
@@ -2050,7 +2051,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
                 return (angle * flipit < 0) ? 'end' : 'start';
             };
         }
-        else if(axLetter === 'y'){
+        else if(axLetter === 'y') {
             flipit = (axside === 'right') ? 1 : -1;
             labelx = yLabelx;
             labely = yLabely;
@@ -2120,7 +2121,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
 
         function positionLabels(s, angle) {
             s.each(function(d) {
-                var anchor = labelanchor(angle, d);;
+                var anchor = labelanchor(angle, d);
                 var thisLabel = d3.select(this),
                     mathjaxGroup = thisLabel.select('.text-math-group'),
                     transform = transfn(d) +

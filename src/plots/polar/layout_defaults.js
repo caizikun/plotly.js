@@ -33,7 +33,7 @@ function handleDefaults(contIn, contOut, coerce, opts) {
     opts.bgColor = Color.combine(bgColor, opts.paper_bgcolor);
 
     // TODO sanitize sector similar to 'range'
-    coerce('sector');
+    var sector = coerce('sector');
 
     // could optimize, subplotData is not always needed!
     var subplotData = Plots.getSubplotData(opts.fullData, constants.name, opts.id);
@@ -66,7 +66,7 @@ function handleDefaults(contIn, contOut, coerce, opts) {
 
         coerceAxis('visible');
         if(!axOut.visible) continue;
-    
+
         setConvert(axOut, layoutOut);
 
         switch(axName) {
@@ -78,7 +78,7 @@ function handleDefaults(contIn, contOut, coerce, opts) {
                 axOut.cleanRange();
 
                 coerceAxis('side');
-                coerceAxis('position');
+                coerceAxis('position', sector[0]);
                 break;
             case 'angularaxis':
                 if(axType === 'linear') {
@@ -86,11 +86,11 @@ function handleDefaults(contIn, contOut, coerce, opts) {
                     axOut.autorange = false;
                     axOut.range = [0, 360];
                 } else {
-                    coerce('period')
+                    coerceAxis('period');
                 }
 
                 coerceAxis('direction');
-                coerceAxis('position')
+                coerceAxis('position');
                 break;
         }
 

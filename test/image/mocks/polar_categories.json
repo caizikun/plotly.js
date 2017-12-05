@@ -44,7 +44,7 @@
         "y": [0.54, 1]
       },
       "radialaxis": {
-        "angle": 45
+        "position": 45
       }
     },
     "polar2": {
@@ -53,7 +53,7 @@
         "y": [0, 0.46]
       },
       "radialaxis": {
-        "angle": 180,
+        "position": 180,
         "tickangle": -180
       }
     },
@@ -63,7 +63,7 @@
         "y": [0.54, 1]
       },
       "radialaxis": {
-        "angle": -45
+        "position": -45
       },
       "angularaxis": {
         "categoryarray": ["d", "a", "c", "b"]

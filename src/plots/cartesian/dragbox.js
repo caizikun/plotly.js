@@ -439,7 +439,7 @@ function makeDragBox(gd, plotinfo, x, y, w, h, ns, ew) {
 
     // everything but the corners gets wheel zoom
     if(ns.length * ew.length !== 1) {
-		attachWheelEventHandler(dragger, zoomWheel);
+        attachWheelEventHandler(dragger, zoomWheel);
     }
 
     // plotDrag: move the plot in response to a drag
@@ -790,7 +790,7 @@ function makeDragBox(gd, plotinfo, x, y, w, h, ns, ew) {
     }
 
     return dragger;
-};
+}
 
 function makeDragger(plotinfo, dragClass, cursor, x, y, w, h) {
     var dragger3 = plotinfo.draglayer.selectAll('.' + dragClass).data([0]);
@@ -929,7 +929,7 @@ function updateZoombox(zb, corners, box, path0, dimmed, lum) {
     zb.attr('d',
         path0 + 'M' + (box.l) + ',' + (box.t) + 'v' + (box.h) +
         'h' + (box.w) + 'v-' + (box.h) + 'h-' + (box.w) + 'Z');
-	transitionZoombox(zb, corners, dimmed, lum);
+    transitionZoombox(zb, corners, dimmed, lum);
 }
 
 function transitionZoombox(zb, corners, dimmed, lum) {
@@ -1040,8 +1040,8 @@ function calcLinks(constraintGroups, xIDs, yIDs) {
 
 // still seems to be some confusion about onwheel vs onmousewheel...
 function attachWheelEventHandler(element, handler) {
-	if(element.onwheel !== undefined) element.onwheel = handler;
-	else if(element.onmousewheel !== undefined) element.onmousewheel = handler;
+    if(element.onwheel !== undefined) element.onwheel = handler;
+    else if(element.onmousewheel !== undefined) element.onmousewheel = handler;
 }
 
 module.exports = {
@@ -1050,12 +1050,12 @@ module.exports = {
     makeDragger: makeDragger,
     makeZoombox: makeZoombox,
     makeCorners: makeCorners,
-	
-	updateZoombox: updateZoombox,
-	xyCorners: xyCorners,
-	transitionZoombox: transitionZoombox,
+
+    updateZoombox: updateZoombox,
+    xyCorners: xyCorners,
+    transitionZoombox: transitionZoombox,
     removeZoombox: removeZoombox,
     clearSelect: clearSelect,
 
-	attachWheelEventHandler: attachWheelEventHandler
+    attachWheelEventHandler: attachWheelEventHandler
 };

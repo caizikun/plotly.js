@@ -148,12 +148,14 @@ module.exports = {
         // (should this support any data coordinate system?)
         // maybe it most intuitive to set this as just an angle!
         position: {
-            valType: 'any',
+            valType: 'angle',
+            // valType: 'any',
             editType: 'plot',
             role: 'info',
             dflt: 0,
             description: [
-                '...'
+                '...',
+                'defaults to the first `polar.sector` angle.'
             ].join(' ')
         },
 
