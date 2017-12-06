@@ -19,9 +19,8 @@ exports.getDelay = function(fullLayout) {
 };
 
 exports.getRedrawFunc = function(gd) {
-
     // do not work if polar is present
-    if((gd.data && gd.data[0] && gd.data[0].r)) return;
+    if((gd.data && gd.data[0] && gd.data[0].r)) return function() {};
 
     return function() {
         (gd.calcdata || []).forEach(function(d) {

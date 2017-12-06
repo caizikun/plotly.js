@@ -318,6 +318,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         // to get auto nticks right!
         domain: [0, PI],
         range: sector,
+        //range: sector.map(deg2rad),
         // ...
         side: 'right',
         zeroline: false,

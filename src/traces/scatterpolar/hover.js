@@ -16,33 +16,35 @@ module.exports = function hoverPoints(pointData, xval, yval, hovermode) {
     if(!scatterPointData || scatterPointData[0].index === false) return;
 
     var newPointData = scatterPointData[0];
-    var cdi = newPointData.cd[newPointData.index];
-    var trace = newPointData.trace;
+
+    // hovering on fill case
+    // TODO do we need to constrain the scatter point data further (like for
+    // ternary subplots) or not?
+    if(newPointData.index === undefined) {
+        return scatterPointData;
+    }
 
     newPointData.xLabelVal = undefined;
     newPointData.yLabelVal = undefined;
 
-    // TODO handle fill
-
-    // TODO should pass subplot in pointData,
-    // so that we don't have to 'manually' add a ref to full trace objects
-    var subplot = trace._subplot;
+    var cdi = newPointData.cd[newPointData.index];
+    var trace = newPointData.trace;
+    var subplot = pointData.subplot;
+    var radialaxis = subplot.radialaxis;
+    var angularaxis = subplot.angularaxis;
     var hoverinfo = cdi.hi || trace.hoverinfo;
     var parts = hoverinfo.split('+');
     var text = [];
 
+    radialaxis._hovertitle = 'r';
+    angularaxis._hovertitle = 'θ';
+
     // TODO must handle case where subplot and trace *thetaunit* differ
+    var theta;
 
     function textPart(ax, val) {
         text.push(ax._hovertitle + ': ' + Axes.tickText(ax, val, 'hover').text);
     }
-
-    var fullLayout = subplot.gd._fullLayout;
-    var subplotId = subplot.id;
-    var radialaxis = fullLayout[subplotId].radialaxis;
-    radialaxis._hovertitle = 'r';
-    var angularaxis = fullLayout[subplotId].angularaxis;
-    angularaxis._hovertitle = 'θ';
 
     // TODO handle case when theta is outside of polar.sector
 

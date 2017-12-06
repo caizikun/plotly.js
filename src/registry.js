@@ -208,7 +208,7 @@ function mergeComponentAttrsToSubplot(componentName, subplotName) {
  */
 exports.getModule = function(trace) {
     if(trace.r !== undefined) {
-        Loggers.warn('Tried to put a polar trace ' +
+        Loggers.warn('Tried to put a legacy polar trace ' +
             'on an incompatible graph of cartesian ' +
             'data. Ignoring this dataset.', trace
         );

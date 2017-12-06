@@ -1427,6 +1427,12 @@ function formatLinear(ax, out, hover, extraPrecision, hideexp) {
 function formatAngle(ax, out, hover, extraPrecision, hideexp) {
     if(ax.thetaunit === 'radians') {
         var isNeg = out.x < 0;
+
+        // TODO must generalize for x not in degrees!!
+        //
+        // MAYBE we should make the angular-onlt blocks in axes.js
+        // expect radians, just likse in the calcdata !!!
+        //
         var num = out.x / 180;
 
         if(num === 0) {
