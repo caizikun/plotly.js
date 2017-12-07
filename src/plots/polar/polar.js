@@ -33,7 +33,6 @@ var constants = require('./constants');
 var axisNames = constants.axisNames;
 var MINZOOM = constants.MINZOOM;
 var MINDRAG = constants.MINDRAG;
-var PI = Math.PI;
 var blankPath = 'M0,0';
 
 var DEBUG = false;
@@ -184,11 +183,8 @@ proto.updateLayers = function(fullLayout, polarLayout) {
 
 proto.updateLayout = function(fullLayout, polarLayout) {
     var _this = this;
-    var gd = _this.gd;
     var layers = _this.layers;
     var gs = fullLayout._size;
-    var radialLayout = polarLayout.radialaxis;
-    var angularLayout = polarLayout.angularaxis;
 
     // layout domains
     var xDomain = polarLayout.domain.x;
@@ -237,6 +233,39 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     var cx = _this.cx = xOffset2 - radius * sectorBBox[0];
     // circle center position y position in px
     var cy = _this.cy = yOffset2 + radius * sectorBBox[3];
+    // save the max radius (useful for drawing angular axes)
+    var rMax = _this.rMax = polarLayout.radialaxis.range[1];
+
+    // TODO WAIT this does not work for radialaxis ranges that
+    // do not start at 0 !!!
+
+    var xaxis = _this.xaxis;
+    xaxis.range = [sectorBBox[0] * rMax, sectorBBox[2] * rMax];
+    xaxis.domain = xDomain2;
+    Axes.setConvert(xaxis, fullLayout);
+    xaxis.setScale();
+    xaxis.isPtWithinRange = function() {};
+
+    var yaxis = _this.yaxis;
+    yaxis.range = [sectorBBox[1] * rMax, sectorBBox[3] * rMax];
+    yaxis.domain = yDomain2;
+    Axes.setConvert(yaxis, fullLayout);
+    yaxis.setScale();
+    yaxis.isPtWithinRange = function() { return true; };
+
+    _this.updateRadialAxis(fullLayout, polarLayout);
+    _this.updateAngularAxis(fullLayout, polarLayout);
+    Drawing.setTranslate(layers.frontplot, xOffset2, yOffset2);
+
+    layers.bgcircle.attr({
+        d: pathSectorClosed(radius, sector),
+        transform: strTranslate(cx, cy)
+    })
+    .call(Color.fill, polarLayout.bgcolor);
+
+    _this.clipPaths.circle
+        .attr('d', pathSectorClosed(radius, sector))
+        .attr('transform', strTranslate(cx - xOffset2, cy - yOffset2));
 
     if(DEBUG) {
         layers.debug.attr({
@@ -259,23 +288,18 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         .attr('stroke-width', '1px')
         .call(Color.stroke, 'blue');
     }
+};
 
-    var rRange = radialLayout.range;
-    var rMax = rRange[1];
-
-    var xaxis = _this.xaxis;
-    xaxis.range = [sectorBBox[0] * rMax, sectorBBox[2] * rMax];
-    xaxis.domain = xDomain2;
-    Axes.setConvert(xaxis, fullLayout);
-    xaxis.setScale();
-    xaxis.isPtWithinRange = function() {};
-
-    var yaxis = _this.yaxis;
-    yaxis.range = [sectorBBox[1] * rMax, sectorBBox[3] * rMax];
-    yaxis.domain = yDomain2;
-    Axes.setConvert(yaxis, fullLayout);
-    yaxis.setScale();
-    yaxis.isPtWithinRange = function() { return true; };
+proto.updateRadialAxis = function(fullLayout, polarLayout) {
+    var _this = this;
+    var gd = _this.gd;
+    var layers = _this.layers;
+    var radius = _this.radius;
+    var cx = _this.cx;
+    var cy = _this.cy;
+    var gs = fullLayout._size;
+    var radialLayout = polarLayout.radialaxis;
+    var sector = polarLayout.sector;
 
     // TODO move deeper in doTicks
     var a0 = wrap360(sector[0]);
@@ -283,7 +307,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         180 :
         radialLayout.tickangle;
 
-    var radialAxis = _this.radialAxis = Lib.extendFlat({}, radialLayout, {
+    var ax = _this.radialAxis = Lib.extendFlat({}, radialLayout, {
         _axislayer: layers.radialaxis,
         _gridlayer: layers.radialaxisgrid,
         // make this an 'x' axis to make positioning (especially rotation) easier
@@ -303,14 +327,17 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         // dummy truthy value to make Axes.doTicks draw the grid
         _counteraxis: true
     });
-    Axes.setConvert(radialAxis, fullLayout);
-    radialAxis.setScale();
+
+    Axes.setConvert(ax, fullLayout);
+    ax.setScale();
+
     // set special grid path function
-    radialAxis._gridpath = function(d) {
-        var r = radialAxis.c2p(d.x);
+    ax._gridpath = function(d) {
+        var r = ax.c2p(d.x);
         return pathSector(r, sector);
     };
-    Axes.doTicks(gd, radialAxis, true);
+
+    Axes.doTicks(gd, ax, true);
 
     // TODO maybe radial axis should be above frontplot ??
 
@@ -318,9 +345,12 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         'transform',
         strTranslate(cx, cy) + strRotate(-radialLayout.position)
     );
+
+    // TODO do I need this??
     layers.radialaxisgrid
         .attr('transform', strTranslate(cx, cy))
         .selectAll('path').attr('transform', null);
+
     layers.radialline.attr({
         display: radialLayout.showline ? null : 'none',
         x1: 0,
@@ -331,18 +361,31 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     })
     .attr('stroke-width', radialLayout.linewidth)
     .call(Color.stroke, radialLayout.linecolor);
+};
+
+proto.updateAngularAxis = function(fullLayout, polarLayout) {
+    var _this = this;
+    var gd = _this.gd;
+    var layers = _this.layers;
+    var radius = _this.radius;
+    var radialAxis = _this.radialAxis;
+    var rMax = _this.rMax;
+    var cx = _this.cx;
+    var cy = _this.cy;
+    var angularLayout = polarLayout.angularaxis;
+    var sector = polarLayout.sector;
 
     // TODO need to rad2deg tick0 and ditck for thetaunit: 'radians' axes
 
-    var angularAxis = _this.angularAxis = Lib.extendFlat({}, angularLayout, {
+    var ax = _this.angularAxis = Lib.extendFlat({}, angularLayout, {
         // .. !!! ...
         _id: 'angular',
         _axislayer: layers.angularaxis,
         _gridlayer: layers.angularaxisgrid,
         _pos: 0,
         // to get auto nticks right!
-        // TODO should be function of polar.sector
-        domain: [0, PI],
+        // TODO should be function of polar.sector ??
+        domain: [0, Math.PI],
         // gets
         side: 'right',
         // ...
@@ -353,15 +396,28 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         // dummy truthy value to make Axes.doTicks draw the grid
         _counteraxis: true
     });
-    Axes.setConvert(angularAxis, fullLayout);
-    angularAxis.setScale();
-    angularAxis._transfn = function(d) {
-        var rad = angularAxis.c2rad(d.x, 'degrees');
 
-        var out = strTranslate(
-            cx + radialAxis.c2p(rMax * Math.cos(rad)),
-            cy - radialAxis.c2p(rMax * Math.sin(rad))
-        );
+    Axes.setConvert(ax, fullLayout);
+    ax.setScale();
+
+    // wrapper around c2rad from setConvertAngular
+    // note that linear ranges are always set in degrees for Axes.doTicks
+    function c2rad(d) {
+        return ax.c2rad(d.x, 'degrees');
+    }
+
+    // (x,y) at max radius
+    function rad2xy(rad) {
+        return [
+            radialAxis.c2p(rMax * Math.cos(rad)),
+            radialAxis.c2p(rMax * Math.sin(rad))
+        ];
+    }
+
+    ax._transfn = function(d) {
+        var rad = c2rad(d);
+        var xy = rad2xy(rad);
+        var out = strTranslate(cx + xy[0], cy - xy[1]);
 
         // must also rotate ticks, but don't rotate labels and grid lines
         var sel = d3.select(this);
@@ -371,44 +427,48 @@ proto.updateLayout = function(fullLayout, polarLayout) {
 
         return out;
     };
-    angularAxis._gridpath = function(d) {
-        var rad = angularAxis.c2rad(d.x, 'degrees');
-        return 'M0,0L' +
-            -radialAxis.c2p(rMax * Math.cos(rad)) + ',' +
-            radialAxis.c2p(rMax * Math.sin(rad));
+
+    ax._gridpath = function(d) {
+        var rad = c2rad(d);
+        var xy = rad2xy(rad);
+        return 'M0,0L' + (-xy[0]) + ',' + xy[1];
     };
-    angularAxis._labelx = function(d) {
-        var rad = angularAxis.c2rad(d.x, 'degrees');
-        var labelStandoff = angularAxis._labelStandoff;
-        var pad = angularAxis._pad;
-        var tickBoost = (angularAxis.ticks !== 'outside' ? 1 : 0.5) * d.fontSize;
+
+    var offset4fontsize = (angularLayout.ticks !== 'outside' ? 1 : 0.5);
+
+    ax._labelx = function(d) {
+        var rad = c2rad(d);
+        var labelStandoff = ax._labelStandoff;
+        var pad = ax._pad;
 
         var offset4tx = signSin(rad) === 0 ?
             0 :
-            Math.cos(rad) * (labelStandoff + pad + tickBoost);
+            Math.cos(rad) * (labelStandoff + pad + offset4fontsize * d.fontSize);
         var offset4tick = signCos(rad) * (d.dx + labelStandoff + pad);
 
         return offset4tx + offset4tick;
     };
-    angularAxis._labely = function(d) {
-        var rad = angularAxis.c2rad(d.x, 'degrees');
-        var labelStandoff = angularAxis._labelStandoff;
-        var labelShift = angularAxis._labelShift;
-        var pad = angularAxis._pad;
-        var tickBoost = (angularAxis.ticks !== 'outside' ? 1 : 0.5) * d.fontSize;
+
+    ax._labely = function(d) {
+        var rad = c2rad(d);
+        var labelStandoff = ax._labelStandoff;
+        var labelShift = ax._labelShift;
+        var pad = ax._pad;
 
         var offset4tx = d.dy + d.fontSize * MID_SHIFT - labelShift;
-        var offset4tick = -Math.sin(rad) * (labelStandoff + pad + tickBoost);
+        var offset4tick = -Math.sin(rad) * (labelStandoff + pad + offset4fontsize * d.fontSize);
 
         return offset4tx + offset4tick;
     };
-    angularAxis._labelanchor = function(angle, d) {
-        var rad = angularAxis.c2rad(d.x, 'degrees');
+
+    ax._labelanchor = function(angle, d) {
+        var rad = c2rad(d);
         return signSin(rad) === 0 ?
             (signCos(rad) > 0 ? 'start' : 'end') :
             'middle';
     };
-    Axes.doTicks(gd, angularAxis, true);
+
+    Axes.doTicks(gd, ax, true);
 
     layers.angularline.attr({
         display: angularLayout.showline ? null : 'none',
@@ -417,18 +477,6 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     })
     .attr('stroke-width', angularLayout.linewidth)
     .call(Color.stroke, angularLayout.linecolor);
-
-    Drawing.setTranslate(layers.frontplot, xOffset2, yOffset2);
-
-    layers.bgcircle.attr({
-        d: pathSectorClosed(radius, sector),
-        transform: strTranslate(cx, cy)
-    })
-    .call(Color.fill, polarLayout.bgcolor);
-
-    _this.clipPaths.circle
-        .attr('d', pathSectorClosed(radius, sector))
-        .attr('transform', strTranslate(cx - xOffset2, cy - yOffset2));
 };
 
 proto.updateFx = function(fullLayout, polarLayout) {
