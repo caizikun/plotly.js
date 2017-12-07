@@ -10,12 +10,16 @@
 
 var scatterHover = require('../scatter/hover');
 var Axes = require('../../plots/cartesian/axes');
+var Lib = require('../../lib');
 
 module.exports = function hoverPoints(pointData, xval, yval, hovermode) {
     var scatterPointData = scatterHover(pointData, xval, yval, hovermode);
     if(!scatterPointData || scatterPointData[0].index === false) return;
 
     var newPointData = scatterPointData[0];
+    var subplot = pointData.subplot;
+
+    // TODO handle case when theta is outside of polar.sector
 
     // hovering on fill case
     // TODO do we need to constrain the scatter point data further (like for
@@ -29,30 +33,34 @@ module.exports = function hoverPoints(pointData, xval, yval, hovermode) {
 
     var cdi = newPointData.cd[newPointData.index];
     var trace = newPointData.trace;
-    var subplot = pointData.subplot;
-    var radialaxis = subplot.radialaxis;
-    var angularaxis = subplot.angularaxis;
+
+    var radialAxis = subplot.radialaxis;
+    var angularAxis = subplot.angularaxis;
     var hoverinfo = cdi.hi || trace.hoverinfo;
     var parts = hoverinfo.split('+');
     var text = [];
 
-    radialaxis._hovertitle = 'r';
-    angularaxis._hovertitle = 'θ';
+    radialAxis._hovertitle = 'r';
+    angularAxis._hovertitle = 'θ';
 
-    // TODO must handle case where subplot and trace *thetaunit* differ
     var theta;
+
+    if(angularAxis.type === 'linear' && trace.thetaunit !== angularAxis.thetaunit) {
+        var rad = angularAxis.c2rad(cdi.theta, trace.thetaunit);
+        theta = angularAxis.thetaunit === 'degrees' ? Lib.rad2deg(rad) : rad;
+    } else {
+        theta = cdi.theta;
+    }
 
     function textPart(ax, val) {
         text.push(ax._hovertitle + ': ' + Axes.tickText(ax, val, 'hover').text);
     }
 
-    // TODO handle case when theta is outside of polar.sector
-
     if(parts.indexOf('all') !== -1) parts = ['r', 'theta'];
-    if(parts.indexOf('r') !== -1) textPart(radialaxis, cdi.r);
+    if(parts.indexOf('r') !== -1) textPart(radialAxis, cdi.r);
 
     // TODO report back in correct 'thetaunit'
-    if(parts.indexOf('theta') !== -1) textPart(angularaxis, cdi.theta);
+    if(parts.indexOf('theta') !== -1) textPart(angularAxis, theta);
 
     newPointData.extraText = text.join('<br>');
 

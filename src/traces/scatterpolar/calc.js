@@ -20,12 +20,6 @@ var calcColorscale = require('../scatter/colorscale_calc');
 var arraysToCalcdata = require('../scatter/arrays_to_calcdata');
 var calcSelection = require('../scatter/calc_selection');
 
-var toRadConverters = {
-    degrees: function(v) { return v / 180 * Math.PI; },
-    gradians: function(v) { return v / 200 * Math.PI; },
-    radians: Number
-};
-
 module.exports = function calc(gd, trace) {
     var fullLayout = gd._fullLayout;
     var subplotId = trace.subplot;
@@ -36,24 +30,8 @@ module.exports = function calc(gd, trace) {
     var len = rArray.length;
     var cd = new Array(len);
 
-    // TODO gotta incorporate polar.direction, polar.rotation
-    var theta2rad;
-
-    switch(angularAxis.type) {
-        case 'linear':
-            theta2rad = toRadConverters[trace.thetaunit];
-            break;
-        case 'category':
-            theta2rad = function(v) {
-                return v * 2 * Math.PI / angularAxis._categories.length;
-            };
-            break;
-        case 'date':
-            var period = angularAxis.period || 365 * 24 * 60 * 60 * 1000;
-            theta2rad = function(v) {
-                return (v % period) * 2 * Math.PI / period;
-            };
-            break;
+    function c2rad(v) {
+        return angularAxis.c2rad(v, trace.thetaunit);
     }
 
     for(var i = 0; i < len; i++) {
@@ -62,12 +40,12 @@ module.exports = function calc(gd, trace) {
         var cdi = cd[i] = {};
 
         if(isNumeric(r) && isNumeric(theta)) {
+            var rad = c2rad(theta);
+
             cdi.r = r;
             cdi.theta = theta;
-
-            var thetaInRad = theta2rad(theta);
-            cdi.x = r * Math.cos(thetaInRad);
-            cdi.y = r * Math.sin(thetaInRad);
+            cdi.x = r * Math.cos(rad);
+            cdi.y = r * Math.sin(rad);
         } else {
             cdi.x = BADNUM;
             cdi.y = BADNUM;
@@ -81,14 +59,14 @@ module.exports = function calc(gd, trace) {
     Axes.expand(radialAxis, rArray, {tozero: true});
 
     // TODO
-    if(angularAxis.type === 'date') {
+    // use with period set, no need to autorange !
+
+    if(angularAxis.type !== 'linear') {
         angularAxis.autorange = true;
         angularAxis._m = 1;
         angularAxis._length = 100;
         Axes.expand(angularAxis, thetaArray);
     }
-
-    // Axes.expand(angularAxis
 
     // TODO Dry up with other scatter* traces!
     // fill in some extras

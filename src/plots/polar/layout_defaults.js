@@ -83,14 +83,14 @@ function handleDefaults(contIn, contOut, coerce, opts) {
             case 'angularaxis':
                 if(axType === 'linear') {
                     coerceAxis('thetaunit');
-                    axOut.autorange = false;
-                    axOut.range = [0, 360];
                 } else {
                     coerceAxis('period');
                 }
 
                 coerceAxis('direction');
                 coerceAxis('position');
+
+                setConvertAngular(axOut);
                 break;
         }
 
@@ -166,6 +166,51 @@ function handleAxisStyleDefaults(axIn, axOut, coerce, opts) {
         coerce('gridcolor', colorMix(dfltColor, opts.bgColor, 60).toRgbString());
         coerce('gridwidth');
     }
+}
+
+function setConvertAngular(ax) {
+    var dir = {clockwise: -1, counterclockwise: 1}[ax.direction];
+    var pos = Lib.deg2rad(ax.position);
+    var _c2rad;
+    var _rad2c;
+
+    if(ax.type === 'linear') {
+        _c2rad = function(v, unit) {
+            if(unit === 'degrees') return Lib.deg2rad(v);
+            return v;
+        };
+        _rad2c = function(v, unit) {
+            if(unit === 'degrees') return Lib.rad2deg(v);
+            return v;
+        };
+    }
+    else if(ax.type === 'category') {
+        _c2rad = function(v) {
+            return v * 2 * Math.PI / ax._categories.length;
+        };
+        _rad2c = function(v) {
+            return v * ax._categories.length / Math.PI / 2;
+        };
+    }
+    else if(ax.type === 'date') {
+        var period = ax.period || 365 * 24 * 60 * 60 * 1000;
+
+        _c2rad = function(v) {
+            return (v % period) * 2 * Math.PI / period;
+        };
+        _rad2c = function(v) {
+            return v * period / Math.PI / 2;
+        };
+    }
+
+    function transfromRad(v) { return dir * (v + pos); }
+    function unTransfromRad(v) { return v / dir * - pos; }
+
+    ax.c2rad = function(v, unit) { return transfromRad(_c2rad(v, unit)); };
+    ax.rad2c = function(v, unit) { return _c2rad(unTransfromRad(v), unit); };
+
+    ax.c2deg = function(v, unit) { return Lib.rad2deg(ax.c2rad(v, unit)); };
+    ax.deg2c = function(v, unit) { return ax.rad2c(Lib.deg2rad(v), unit); };
 }
 
 module.exports = function supplyLayoutDefaults(layoutIn, layoutOut, fullData) {

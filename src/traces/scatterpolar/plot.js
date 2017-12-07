@@ -38,25 +38,25 @@ module.exports = function plot(subplot, moduleCalcData) {
             for(var j = 0; j < trace._polygons.length; j++) {
                 var pts = trace._polygons[j].pts.slice();
                 pts.pop();
-            
+
                 var a0 = pt2deg(pts[0]);
                 for(var k = 1; k < pts.length; k++) {
                     var a1 = pt2deg(pts[k]);
-                    var arc = Math.abs(a1 - a0)
-                    var arcWrapped = Math.abs(wrap360(a1) - wrap360(a0))
+                    var arc = Math.abs(a1 - a0);
+                    var arcWrapped = Math.abs(wrap360(a1) - wrap360(a0));
 
                     // COULD DO BETTER !!!
 
                     if(arc !== arcWrapped) {
-                        console.log('wrapped')                   ;
+                        console.log('wrapped');
                     }
 
-                    
+
                     a0 = a1;
                 }
             }
         }
-    } 
+    }
 };
 
 var PI = Math.PI;

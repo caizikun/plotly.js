@@ -822,9 +822,8 @@ axes.calcTicks = function calcTicks(ax) {
         vals.push(x);
     }
 
-
     // and if same angle ...
-    if(ax._id === 'angular' && vals[0] === vals[vals.length - 1] - 360) {
+    if(ax._id === 'angular' && Math.abs(rng[1] - rng[0]) === 360) {
         vals.pop();
     }
 
@@ -1229,7 +1228,7 @@ axes.tickText = function(ax, x, hover) {
     if(ax.type === 'date') formatDate(ax, out, hover, extraPrecision);
     else if(ax.type === 'log') formatLog(ax, out, hover, extraPrecision, hideexp);
     else if(ax.type === 'category') formatCategory(ax, out);
-    else if(ax.type === 'linear' && ax._id === 'angular') formatAngle(ax, out, hover, extraPrecision, hideexp);
+    else if(ax._id === 'angular') formatAngle(ax, out, hover, extraPrecision, hideexp);
     else formatLinear(ax, out, hover, extraPrecision, hideexp);
 
     // add prefix and suffix
@@ -1425,14 +1424,8 @@ function formatLinear(ax, out, hover, extraPrecision, hideexp) {
 }
 
 function formatAngle(ax, out, hover, extraPrecision, hideexp) {
-    if(ax.thetaunit === 'radians') {
+    if(ax.thetaunit === 'radians' && !hover) {
         var isNeg = out.x < 0;
-
-        // TODO must generalize for x not in degrees!!
-        //
-        // MAYBE we should make the angular-onlt blocks in axes.js
-        // expect radians, just likse in the calcdata !!!
-        //
         var num = out.x / 180;
 
         if(num === 0) {
@@ -2072,19 +2065,19 @@ axes.doTicks = function(gd, axid, skipTitle) {
         else if(axid === 'angular') {
             flipit = 1;
             labelx = function(d) {
-                var theta = ax.x2rad(d.x);
-                return Math.cos(theta) * yLabelx(d) - Math.sin(theta) * xLabelx(d);
+                var rad = ax.c2rad(d.x, 'degrees');
+                return Math.cos(rad) * yLabelx(d) - Math.sin(rad) * xLabelx(d);
             };
 
             labely = function(d) {
-                var theta = ax.x2rad(d.x);
-                return Math.cos(theta) * yLabely(d) - Math.sin(theta) * xLabely(d);
+                var rad = ax.c2rad(d.x, 'degrees');
+                return Math.cos(rad) * yLabely(d) - Math.sin(rad) * xLabely(d);
             };
 
             labelanchor = function(angle, d) {
-                var cosTheta = Math.cos(ax.x2rad(d.x));
-                return cosTheta > 0 ? 'start' :
-                    cosTheta < 0 ? 'end' :
+                var cos = Math.cos(ax.c2rad(d.x), 'degrees');
+                return cos > 0 ? 'start' :
+                    cos < 0 ? 'end' :
                     'middle';
             };
         }
@@ -2421,7 +2414,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
         grid.attr('transform', transfn)
             .call(Color.stroke, ax.gridcolor || '#ddd')
             .style('stroke-width', gridWidth + 'px');
-        if(typeof gridpath === 'function') grid.attr('d', gridpath)
+        if(typeof gridpath === 'function') grid.attr('d', gridpath);
         grid.exit().remove();
 
         // zero line

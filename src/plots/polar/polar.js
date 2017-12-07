@@ -6,7 +6,6 @@
 * LICENSE file in the root directory of this source tree.
 */
 
-
 'use strict';
 
 var d3 = require('d3');
@@ -23,6 +22,10 @@ var dragBox = require('../cartesian/dragbox');
 var setCursor = require('../../lib/setcursor');
 var Fx = require('../../components/fx');
 var prepSelect = require('../cartesian/select');
+
+var deg2rad = Lib.deg2rad;
+var rad2deg = Lib.rad2deg;
+var wrap360 = Lib.wrap360;
 
 var constants = require('./constants');
 var axisNames = constants.axisNames;
@@ -79,6 +82,8 @@ module.exports = function createPolar(gd, id) {
 proto.plot = function(polarCalcData, fullLayout) {
     var _this = this;
     var polarLayout = fullLayout[_this.id];
+    var radialLayout = polarLayout.radialaxis;
+    var angularLayout = polarLayout.angularaxis;
 
     // TODO maybe move to generalUpdatePerTraceModule ?
     _this.hasClipOnAxisFalse = false;
@@ -91,9 +96,17 @@ proto.plot = function(polarCalcData, fullLayout) {
         }
     }
 
-    Axes.doAutoRange(polarLayout.radialaxis);
+    Axes.doAutoRange(radialLayout);
 
-    // will have to do an autorange for date (and maybe category) axes
+    if(angularLayout.type === 'linear') {
+        angularLayout.autorange = false;
+        // N.B. set an angular range in degrees to make
+        // auto-tick computation cleaner
+        angularLayout.range = polarLayout.sector.slice();
+    } else {
+        // will have to do an autorange for date (and maybe category) axes
+        // Axes.doAutoRange(polarLayout.angularaxis);
+    }
 
     _this.updateLayers(fullLayout, polarLayout);
     _this.updateLayout(fullLayout, polarLayout);
@@ -255,6 +268,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     yaxis.setScale();
     yaxis.isPtWithinRange = function() { return true; };
 
+    // TODO move deeper in doTicks
     var a0 = wrap360(sector[0]);
     var tickangle = radialLayout.tickangle === 'auto' && (a0 > 90 && a0 <= 270) ?
         180 :
@@ -316,11 +330,11 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         _gridlayer: layers.angularaxisgrid,
         _pos: 0,
         // to get auto nticks right!
+        // TODO should be function of polar.sector
         domain: [0, PI],
-        range: sector,
-        //range: sector.map(deg2rad),
         // ...
         side: 'right',
+        // ...
         zeroline: false,
         // to get _boundingBox computation right when showticklabels is false
         anchor: 'free',
@@ -330,40 +344,30 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     });
     Axes.setConvert(angularAxis, fullLayout);
     angularAxis.setScale();
-    var x2rad = angularAxis.x2rad = function(v) {
-        if(angularAxis.type === 'category') {
-            return v * 2 * PI / angularAxis._categories.length;
-        } else if(angularAxis.type === 'date') {
-            var period = angularAxis.period || 365 * 24 * 60 * 60 * 1000;
-            return (v % period) * 2 * PI / period;
-        }
-        return deg2rad(v);
-    };
     angularAxis._transfn = function(d) {
-        var r = radialAxis.range[1];
-        var theta = -x2rad(d.x);
-        var x = cx + radialAxis.c2p(r * Math.cos(theta));
-        var y = cy + radialAxis.c2p(r * Math.sin(theta));
-        return 'translate(' + x + ',' + y + ')';
+        var rad = angularAxis.c2rad(d.x, 'degrees');
+
+        var out = strTranslate(
+            cx + radialAxis.c2p(rMax * Math.cos(rad)),
+            cy - radialAxis.c2p(rMax * Math.sin(rad))
+        );
+
+        // must also rotate ticks
+        var sel = d3.select(this);
+        if(sel && sel.node() && sel.classed('ticks')) {
+            out += strRotate(-rad2deg(rad));
+        }
+
+        return out;
     };
     angularAxis._gridpath = function(d) {
-        var r = radialAxis.range[1];
-        var theta = -x2rad(d.x);
-        var x = radialAxis.c2p(r * Math.cos(theta));
-        var y = radialAxis.c2p(r * Math.sin(theta));
-        return 'M0,0L' + [-x, -y];
+        var rad = angularAxis.c2rad(d.x, 'degrees');
+
+        return 'M0,0L' +
+            -radialAxis.c2p(rMax * Math.cos(rad)) + ',' +
+            radialAxis.c2p(rMax * Math.sin(rad));
     };
     Axes.doTicks(gd, angularAxis, true);
-
-    layers.angularaxis.selectAll('path.angulartick.ticks')
-        .attr('transform', function(d) {
-            var baseTransform = d3.select(this).attr('transform');
-            var angle = d.x;
-            if(angularLayout.type !== 'linear') {
-                angle = rad2deg(x2rad(angle));
-            }
-            return baseTransform + 'rotate(' + -angle + ')';
-        });
 
     layers.angularline.attr({
         display: angularLayout.showline ? null : 'none',
@@ -704,19 +708,6 @@ function computeSectorBBox(sector) {
     return [x0, y0, x1, y1];
 }
 
-function deg2rad(deg) {
-    return deg / 180 * PI;
-}
-
-function rad2deg(rad) {
-    return rad / PI * 180;
-}
-
-function wrap360(deg) {
-    var out = deg % 360;
-    return out < 0 ? out + 360 : out;
-}
-
 function pathSector(r, sector) {
     if(isFullCircle(sector)) {
         return Drawing.symbolFuncs[0](r);
@@ -736,7 +727,7 @@ function pathSector(r, sector) {
 
 function pathSectorClosed(r, sector) {
     return pathSector(r, sector) +
-        (isFullCircle(sector) ?  '' : 'L0,0Z');
+        (isFullCircle(sector) ? '' : 'L0,0Z');
 }
 
 function isFullCircle(sector) {

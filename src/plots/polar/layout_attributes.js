@@ -251,7 +251,7 @@ module.exports = {
             values: ['counterclockwise', 'clockwise'],
             dflt: 'counterclockwise',
             role: 'info',
-            editType: 'plot',
+            editType: 'calc',
             description: [
                 'Sets the direction corresponding to positive angles.'
             ].join(' ')
@@ -267,7 +267,7 @@ module.exports = {
         position: {
             valType: 'angle',
             dflt: 0,
-            editType: 'plot',
+            editType: 'calc',
             role: 'info',
             description: [
                 'Start position (in degree between -180 and 180) of the angular axis',
