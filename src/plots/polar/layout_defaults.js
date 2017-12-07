@@ -217,7 +217,7 @@ function setConvertAngular(ax) {
     ax._c2rad = _c2rad;
 
     ax.c2rad = function(v, unit) { return transformRad(_c2rad(v, unit)); };
-    ax.rad2c = function(v, unit) { return _c2rad(unTransformRad(v), unit); };
+    ax.rad2c = function(v, unit) { return _rad2c(unTransformRad(v), unit); };
 
     ax.c2deg = function(v, unit) { return Lib.rad2deg(ax.c2rad(v, unit)); };
     ax.deg2c = function(v, unit) { return ax.rad2c(Lib.deg2rad(v), unit); };

@@ -1901,7 +1901,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
     var axLetter = axid.charAt(0),
         counterLetter = axes.counterLetter(axid),
         vals = axes.calcTicks(ax),
-        datafn = function(d) { return [d.text, d.x, ax.mirror].join('_'); },
+        datafn = function(d) { return [d.text, d.x, ax.mirror, d.font, d.fontSize, d.fontColor].join('_'); },
         tcls = axid + 'tick',
         gcls = axid + 'grid',
         zcls = axid + 'zl',
@@ -2063,23 +2063,13 @@ axes.doTicks = function(gd, axid, skipTitle) {
             };
         }
         else if(axid === 'angular') {
-            flipit = 1;
-            labelx = function(d) {
-                var rad = ax.c2rad(d.x, 'degrees');
-                return Math.cos(rad) * yLabelx(d) - Math.sin(rad) * xLabelx(d);
-            };
+            ax._labelShift = labelShift;
+            ax._labelStandoff = labelStandoff;
+            ax._pad = pad;
 
-            labely = function(d) {
-                var rad = ax.c2rad(d.x, 'degrees');
-                return Math.cos(rad) * yLabely(d) - Math.sin(rad) * xLabely(d);
-            };
-
-            labelanchor = function(angle, d) {
-                var cos = Math.cos(ax.c2rad(d.x, 'degrees'));
-                return cos > 0 ? 'start' :
-                    cos < 0 ? 'end' :
-                    'middle';
-            };
+            labelx = ax._labelx;
+            labely = ax._labely;
+            labelanchor = ax._labelanchor;
         }
 
         var maxFontSize = 0,
@@ -2113,6 +2103,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
                         positionLabels(thisLabel, ax.tickangle);
                     }
                 });
+
         tickLabels.exit().remove();
 
         tickLabels.each(function(d) {

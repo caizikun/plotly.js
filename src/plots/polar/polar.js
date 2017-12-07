@@ -23,6 +23,8 @@ var setCursor = require('../../lib/setcursor');
 var Fx = require('../../components/fx');
 var prepSelect = require('../cartesian/select');
 
+var MID_SHIFT = require('../../constants/alignment').MID_SHIFT;
+
 var deg2rad = Lib.deg2rad;
 var rad2deg = Lib.rad2deg;
 var wrap360 = Lib.wrap360;
@@ -106,7 +108,7 @@ proto.plot = function(polarCalcData, fullLayout) {
 
         // Changing position/direction should not affect the angular tick labels !!
         if(isFullCircle(sector)) {
-            angularLayout.range = sector.slice()
+            angularLayout.range = sector.slice();
         } else {
             angularLayout.range = sector.map(deg2rad).map(angularLayout.unTransformRad).map(rad2deg);
         }
@@ -281,7 +283,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         180 :
         radialLayout.tickangle;
 
-    var radialAxis = _this.radialaxis = Lib.extendFlat({}, radialLayout, {
+    var radialAxis = _this.radialAxis = Lib.extendFlat({}, radialLayout, {
         _axislayer: layers.radialaxis,
         _gridlayer: layers.radialaxisgrid,
         // make this an 'x' axis to make positioning (especially rotation) easier
@@ -330,7 +332,9 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     .attr('stroke-width', radialLayout.linewidth)
     .call(Color.stroke, radialLayout.linecolor);
 
-    var angularAxis = _this.angularaxis = Lib.extendFlat({}, angularLayout, {
+    // TODO need to rad2deg tick0 and ditck for thetaunit: 'radians' axes
+
+    var angularAxis = _this.angularAxis = Lib.extendFlat({}, angularLayout, {
         // .. !!! ...
         _id: 'angular',
         _axislayer: layers.angularaxis,
@@ -339,7 +343,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
         // to get auto nticks right!
         // TODO should be function of polar.sector
         domain: [0, PI],
-        // ...
+        // gets
         side: 'right',
         // ...
         zeroline: false,
@@ -359,7 +363,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
             cy - radialAxis.c2p(rMax * Math.sin(rad))
         );
 
-        // must also rotate ticks
+        // must also rotate ticks, but don't rotate labels and grid lines
         var sel = d3.select(this);
         if(sel && sel.node() && sel.classed('ticks')) {
             out += strRotate(-rad2deg(rad));
@@ -369,10 +373,40 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     };
     angularAxis._gridpath = function(d) {
         var rad = angularAxis.c2rad(d.x, 'degrees');
-
         return 'M0,0L' +
             -radialAxis.c2p(rMax * Math.cos(rad)) + ',' +
             radialAxis.c2p(rMax * Math.sin(rad));
+    };
+    angularAxis._labelx = function(d) {
+        var rad = angularAxis.c2rad(d.x, 'degrees');
+        var labelStandoff = angularAxis._labelStandoff;
+        var pad = angularAxis._pad;
+        var tickBoost = (angularAxis.ticks !== 'outside' ? 1 : 0.5) * d.fontSize;
+
+        var offset4tx = signSin(rad) === 0 ?
+            0 :
+            Math.cos(rad) * (labelStandoff + pad + tickBoost);
+        var offset4tick = signCos(rad) * (d.dx + labelStandoff + pad);
+
+        return offset4tx + offset4tick;
+    };
+    angularAxis._labely = function(d) {
+        var rad = angularAxis.c2rad(d.x, 'degrees');
+        var labelStandoff = angularAxis._labelStandoff;
+        var labelShift = angularAxis._labelShift;
+        var pad = angularAxis._pad;
+        var tickBoost = (angularAxis.ticks !== 'outside' ? 1 : 0.5) * d.fontSize;
+
+        var offset4tx = d.dy + d.fontSize * MID_SHIFT - labelShift;
+        var offset4tick = -Math.sin(rad) * (labelStandoff + pad + tickBoost);
+
+        return offset4tx + offset4tick;
+    };
+    angularAxis._labelanchor = function(angle, d) {
+        var rad = angularAxis.c2rad(d.x, 'degrees');
+        return signSin(rad) === 0 ?
+            (signCos(rad) > 0 ? 'start' : 'end') :
+            'middle';
     };
     Axes.doTicks(gd, angularAxis, true);
 
@@ -748,4 +782,19 @@ function strTranslate(x, y) {
 
 function strRotate(angle) {
     return 'rotate(' + angle + ')';
+}
+
+// because Math.sign(Math.cos(Math.PI / 2)) === 1
+// oh javascript ;)
+function sign(v) {
+    return Math.abs(v) < 1e-10 ? 0 :
+        v > 0 ? 1 : -1;
+}
+
+function signCos(v) {
+    return sign(Math.cos(v));
+}
+
+function signSin(v) {
+    return sign(Math.sin(v));
 }
