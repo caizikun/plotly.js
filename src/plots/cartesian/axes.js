@@ -2075,7 +2075,7 @@ axes.doTicks = function(gd, axid, skipTitle) {
             };
 
             labelanchor = function(angle, d) {
-                var cos = Math.cos(ax.c2rad(d.x), 'degrees');
+                var cos = Math.cos(ax.c2rad(d.x, 'degrees'));
                 return cos > 0 ? 'start' :
                     cos < 0 ? 'end' :
                     'middle';

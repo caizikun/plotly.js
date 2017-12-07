@@ -17,9 +17,6 @@ module.exports = function hoverPoints(pointData, xval, yval, hovermode) {
     if(!scatterPointData || scatterPointData[0].index === false) return;
 
     var newPointData = scatterPointData[0];
-    var subplot = pointData.subplot;
-
-    // TODO handle case when theta is outside of polar.sector
 
     // hovering on fill case
     // TODO do we need to constrain the scatter point data further (like for
@@ -33,20 +30,22 @@ module.exports = function hoverPoints(pointData, xval, yval, hovermode) {
 
     var cdi = newPointData.cd[newPointData.index];
     var trace = newPointData.trace;
-
+    var subplot = pointData.subplot;
     var radialAxis = subplot.radialaxis;
     var angularAxis = subplot.angularaxis;
     var hoverinfo = cdi.hi || trace.hoverinfo;
     var parts = hoverinfo.split('+');
     var text = [];
 
+    // TODO handle case when theta is outside of polar.sector
+    var rad = angularAxis._c2rad(cdi.theta, trace.thetaunit);
+
     radialAxis._hovertitle = 'r';
     angularAxis._hovertitle = 'θ';
 
+    // show theta value in unit of angular axis
     var theta;
-
     if(angularAxis.type === 'linear' && trace.thetaunit !== angularAxis.thetaunit) {
-        var rad = angularAxis.c2rad(cdi.theta, trace.thetaunit);
         theta = angularAxis.thetaunit === 'degrees' ? Lib.rad2deg(rad) : rad;
     } else {
         theta = cdi.theta;

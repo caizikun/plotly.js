@@ -87,6 +87,9 @@ function handleDefaults(contIn, contOut, coerce, opts) {
                     coerceAxis('period');
                 }
 
+                // TODO maybe non-linear axis
+                // should get direction: 'clockwise' + position: 90
+                // by default??
                 coerceAxis('direction');
                 coerceAxis('position');
 
@@ -203,11 +206,18 @@ function setConvertAngular(ax) {
         };
     }
 
-    function transfromRad(v) { return dir * (v + pos); }
-    function unTransfromRad(v) { return v / dir * - pos; }
+    function transformRad(v) { return dir * v + pos; }
+    function unTransformRad(v) { return (v - pos) / dir; }
 
-    ax.c2rad = function(v, unit) { return transfromRad(_c2rad(v, unit)); };
-    ax.rad2c = function(v, unit) { return _c2rad(unTransfromRad(v), unit); };
+    // use ...
+    ax.transformRad = transformRad;
+    ax.unTransformRad = unTransformRad;
+
+    // this version is used on hover
+    ax._c2rad = _c2rad;
+
+    ax.c2rad = function(v, unit) { return transformRad(_c2rad(v, unit)); };
+    ax.rad2c = function(v, unit) { return _c2rad(unTransformRad(v), unit); };
 
     ax.c2deg = function(v, unit) { return Lib.rad2deg(ax.c2rad(v, unit)); };
     ax.deg2c = function(v, unit) { return ax.rad2c(Lib.deg2rad(v), unit); };

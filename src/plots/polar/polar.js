@@ -102,7 +102,14 @@ proto.plot = function(polarCalcData, fullLayout) {
         angularLayout.autorange = false;
         // N.B. set an angular range in degrees to make
         // auto-tick computation cleaner
-        angularLayout.range = polarLayout.sector.slice();
+        var sector = polarLayout.sector;
+
+        // Changing position/direction should not affect the angular tick labels !!
+        if(isFullCircle(sector)) {
+            angularLayout.range = sector.slice()
+        } else {
+            angularLayout.range = sector.map(deg2rad).map(angularLayout.unTransformRad).map(rad2deg);
+        }
     } else {
         // will have to do an autorange for date (and maybe category) axes
         // Axes.doAutoRange(polarLayout.angularaxis);
