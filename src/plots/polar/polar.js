@@ -45,13 +45,15 @@ function Polar(gd, id) {
     this.traceHash = {};
     this.layers = {};
     this.clipPaths = {};
+    this.clipIds = {};
 
     var fullLayout = gd._fullLayout;
     var polarLayout = fullLayout[id];
-    var clipId = this.clipId = 'clip' + fullLayout._uid + id;
+    var clipIdBase = 'clip' + fullLayout._uid + id;
 
+    this.clipIds.circle = clipIdBase + '-circle';
     this.clipPaths.circle = fullLayout._clips.append('clipPath')
-        .attr('id', clipId + '-circle')
+        .attr('id', this.clipIds.circle)
         .append('path');
 
     this.framework = fullLayout._polarlayer.append('g')
@@ -139,9 +141,7 @@ proto.updateLayers = function(fullLayout, polarLayout) {
 
             switch(d) {
                 case 'frontplot':
-                    sel.append('g')
-                        .classed('scatterlayer', true)
-                        .call(Drawing.setClipUrl, _this.clipId + '-circle');
+                    sel.append('g').classed('scatterlayer', true)
                     break;
                 case 'backplot':
                     sel.append('g').classed('maplayer', true);
@@ -244,7 +244,7 @@ proto.updateLayout = function(fullLayout, polarLayout) {
     xaxis.domain = xDomain2;
     Axes.setConvert(xaxis, fullLayout);
     xaxis.setScale();
-    xaxis.isPtWithinRange = function() {};
+    xaxis.isPtWithinRange = function() { return true; };
 
     var yaxis = _this.yaxis;
     yaxis.range = [sectorBBox[1] * rMax, sectorBBox[3] * rMax];
@@ -255,7 +255,10 @@ proto.updateLayout = function(fullLayout, polarLayout) {
 
     _this.updateRadialAxis(fullLayout, polarLayout);
     _this.updateAngularAxis(fullLayout, polarLayout);
-    Drawing.setTranslate(layers.frontplot, xOffset2, yOffset2);
+
+    layers.frontplot
+        .call(Drawing.setTranslate, xOffset2, yOffset2)
+        .call(Drawing.setClipUrl, _this.hasClipOnAxisFalse ? null : _this.clipIds.circle);
 
     layers.bgcircle.attr({
         d: pathSectorClosed(radius, sector),

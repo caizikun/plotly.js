@@ -20,7 +20,7 @@ module.exports = function plot(subplot, moduleCalcData) {
         xaxis: xa,
         yaxis: ya,
         plot: subplot.framework,
-        layerClipId: subplot.hasClipOnAxisFalse ? subplot.clipId : null
+        layerClipId: subplot.hasClipOnAxisFalse ? subplot.clipIds.circle : null
     };
 
     scatterPlot(subplot.graphDiv, plotinfo, moduleCalcData);
