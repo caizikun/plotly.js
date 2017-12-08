@@ -24,42 +24,8 @@ var domainItem = {
     dflt: [0, 1]
 };
 
-var axisStyleAttrs = overrideAll({
-    // not sure about these
-    // maybe just for radialaxis ??
-    // title: axesAttrs.title,
-    // titlefont: axesAttrs.titlefont,
-
-    visible: extendFlat({}, axesAttrs.visible, {dflt: true}),
+var axisLineGridAttr = overrideAll({
     color: axesAttrs.color,
-    tickmode: axesAttrs.tickmode,
-    nticks: axesAttrs.nticks,
-    tick0: axesAttrs.tick0,
-    dtick: axesAttrs.dtick,
-    tickvals: axesAttrs.tickvals,
-    ticktext: axesAttrs.ticktext,
-    // 'inside' / 'outside' don't make sense for radial axis
-    ticks: axesAttrs.ticks,
-    ticklen: axesAttrs.ticklen,
-    tickwidth: axesAttrs.tickwidth,
-    tickcolor: axesAttrs.tickcolor,
-    showticklabels: axesAttrs.showticklabels,
-    showtickprefix: axesAttrs.showtickprefix,
-    tickprefix: axesAttrs.tickprefix,
-    showticksuffix: axesAttrs.showticksuffix,
-    // maybe show degree symbol or $i * \pi$ by default
-    ticksuffix: axesAttrs.ticksuffix,
-    showexponent: axesAttrs.showexponent,
-    exponentformat: axesAttrs.exponentformat,
-    separatethousands: axesAttrs.separatethousands,
-    tickfont: axesAttrs.tickfont,
-    tickangle: axesAttrs.tickangle,
-    tickformat: axesAttrs.tickformat,
-    hoverformat: axesAttrs.hoverformat,
-
-    // not sure about this one
-    // tickformatstops: axesAttrs.tickformatstops,
-
     showline: extendFlat({}, axesAttrs.showline, {dflt: true}),
     linecolor: axesAttrs.linecolor,
     linewidth: axesAttrs.linewidth,
@@ -73,8 +39,223 @@ var axisStyleAttrs = overrideAll({
     // we could add spike* attributes down the road
 }, 'plot', 'from-root');
 
+var axisTickAttr = overrideAll({
+    tickmode: axesAttrs.tickmode,
+    nticks: axesAttrs.nticks,
+    tick0: axesAttrs.tick0,
+    dtick: axesAttrs.dtick,
+    tickvals: axesAttrs.tickvals,
+    ticktext: axesAttrs.ticktext,
+    ticks: axesAttrs.ticks,
+    ticklen: axesAttrs.ticklen,
+    tickwidth: axesAttrs.tickwidth,
+    tickcolor: axesAttrs.tickcolor,
+    showticklabels: axesAttrs.showticklabels,
+    showtickprefix: axesAttrs.showtickprefix,
+    tickprefix: axesAttrs.tickprefix,
+    showticksuffix: axesAttrs.showticksuffix,
+    ticksuffix: axesAttrs.ticksuffix,
+    showexponent: axesAttrs.showexponent,
+    exponentformat: axesAttrs.exponentformat,
+    separatethousands: axesAttrs.separatethousands,
+    tickfont: axesAttrs.tickfont,
+    tickangle: axesAttrs.tickangle,
+    tickformat: axesAttrs.tickformat,
+    tickformatstops: axesAttrs.tickformatstops,
+}, 'plot', 'from-root');
+
+var radialAxisAttrs = {
+    visible: extendFlat({}, axesAttrs.visible, {dflt: true}),
+    type: axesAttrs.type,
+
+    // You thought maybe that range should only be a 'max' instead
+    // as it always starts at 0? But, looks like off-zero cutout polar chart are
+    // a thing:
+    // -> mpl allow radial ranges to start off 0
+    // -> same for matlab: https://www.mathworks.com/help/matlab/ref/rlim.html
+    autorange: axesAttrs.autorange,
+    // might make 'nonnegative' the default
+    rangemode: axesAttrs.rangemode,
+    range: axesAttrs.range,
+
+    categoryorder: axesAttrs.categoryorder,
+    categoryarray: axesAttrs.categoryarray,
+
+    // position (analogous to xaxis.position),
+    // or maybe something more specific e.g. angle angleoffset?
+    //
+    // (should this support any data coordinate system?)
+    // maybe it most intuitive to set this as just an angle!
+    position: {
+        valType: 'angle',
+        // valType: 'any',
+        editType: 'plot',
+        role: 'info',
+        dflt: 0,
+        description: [
+            '...',
+            'defaults to the first `polar.sector` angle.'
+        ].join(' ')
+    },
+
+    side: {
+        valType: 'enumerated',
+        // maybe 'clockwise' and 'counterclockwise' would be best here
+        values: ['left', 'right'],
+        dflt: 'right',
+        editType: 'plot',
+        role: 'info',
+        description: [
+            'Determines on which side of radial axis line',
+            'the tick and tick labels appear.'
+        ].join(' ')
+    },
+
+    // not sure about these
+    // maybe just for radialaxis ??
+    title: axesAttrs.title,
+    titlefont: axesAttrs.titlefont,
+
+    // only applies to radial axis for now (i.e. for cliponaxis: false traces)
+    // but angular.layer could be a thing later
+    layer: axesAttrs.layer,
+
+    hoverformat: axesAttrs.hoverformat,
+
+    // More attributes:
+
+    // do we need some attribute that determines the span
+    // to draw donut-like charts
+    // e.g. https://github.com/matplotlib/matplotlib/issues/4217
+    //
+    // maybe something like 'span' or 'hole' (like pie, but pie set it in data coords)
+    // span: {},
+    // hole: 1
+
+    // maybe should add a boolean to enable square grid lines
+    // and square axis lines
+    // (most common in radar-like charts)
+    // e.g. squareline/squaregrid or showline/showgrid: 'square' (on-top of true)
+
+    editType: 'calc'
+};
+
+extendFlat(
+    radialAxisAttrs,
+
+    // N.B. the radialaxis grid lines are circular,
+    // but radialaxis lines are straight from circle center to outer bound
+    axisLineGridAttr,
+    axisTickAttr
+);
+
+var angularAxisAttrs = {
+    visible: extendFlat({}, axesAttrs.visible, {dflt: true}),
+    type: {
+        valType: 'enumerated',
+        // 'linear' should maybe be called 'angle' or 'angular' here
+        // to make clear that axis here is periodic and more tightly match
+        // `thetaunit`?
+        //
+        // no 'log' for now
+        values: ['-', 'linear', 'date', 'category'],
+        dflt: '-',
+        role: 'info',
+        editType: 'calc',
+        description: [
+            'Sets the angular axis type.',
+            'If *linear*, set `thetaunit` to determine the unit in which axis value are shown.',
+            'If *date*, set `period` to determine the wrap around period.',
+            'If *category, set `period` to determine the number of integer coordinates around polar axis.'
+        ].join(' ')
+    },
+
+    categoryorder: axesAttrs.categoryorder,
+    categoryarray: axesAttrs.categoryarray,
+
+    thetaunit: {
+        valType: 'enumerated',
+        values: ['radians', 'degrees'],
+        dflt: 'degrees',
+        role: 'info',
+        editType: 'calc',
+        description: [
+            'Sets the format unit of the formatted *theta* values.',
+            'Has an effect only when `angularaxis.type` is *linear*.'
+        ].join(' ')
+    },
+
+    period: {
+        valType: 'any',
+        editType: 'calc',
+        role: 'info',
+        description: ''
+
+        // 360 / 2*pi for linear (might not need to set it)
+        // and to full range for other types
+
+        // 'period' is angular equivalent to 'range'
+
+        // similar to dtick, one way to achieve e.g.:
+        // - period that equals the timeseries length
+        //  http://flowingdata.com/2017/01/24/one-dataset-visualized-25-ways/18-polar-coordinates/
+        // - and 1-year periods (focusing on seasonal change0
+        //  http://otexts.org/fpp2/seasonal-plots.html
+        //  https://blogs.scientificamerican.com/sa-visual/why-are-so-many-babies-born-around-8-00-a-m/
+        //  http://www.seasonaladjustment.com/2012/09/05/clock-plot-visualising-seasonality-using-r-and-ggplot2-part-3/
+        //  https://i.pinimg.com/736x/49/b9/72/49b972ccb3206a1a6d6f870dac543280.jpg
+        //  https://www.climate-lab-book.ac.uk/spirals/
+    },
+
+    direction: {
+        valType: 'enumerated',
+        values: ['counterclockwise', 'clockwise'],
+        // we could make the default 'clockwise' for date axes ...
+        dflt: 'counterclockwise',
+        role: 'info',
+        editType: 'calc',
+        description: [
+            'Sets the direction corresponding to positive angles.'
+        ].join(' ')
+    },
+
+    // matlab uses thetaZeroLocation: 'North', 'West', 'East', 'South'
+    // mpl uses set_theta_zero_location('W', offset=10)
+    //
+    // position is analogous to yaxis.position, but as an angle (going
+    // counterclockwise about cartesian y=0.
+    position: {
+        valType: 'angle',
+        // we could maybe make `position: 90` by default for category and date angular axes.
+        dflt: 0,
+        editType: 'calc',
+        role: 'info',
+        description: [
+            'Start position (in degrees) of the angular axis',
+            'Note that by default, polar subplots are orientation such that the theta=0',
+            'corresponds to a line pointing right (like what mathematicians prefer).',
+            'For example to make the angular axis start from the North (like on a compass),',
+            'set `position` to *90*.'
+        ].join(' ')
+    },
+
+    hoverformat: axesAttrs.hoverformat,
+
+    editType: 'calc'
+};
+
+extendFlat(
+    angularAxisAttrs,
+
+    // N.B. the angular grid lines are straight lines from circle center to outer bound
+    // the angular line is circular bounding the polar plot area.
+    axisLineGridAttr,
+    // Note that ticksuffix defaults to '°' for angular axes with `thetaunit: 'degrees'`
+    axisTickAttr
+);
+
 module.exports = {
-    // I thought about a x/y/zoom system for paper-based zooming
+    // AJ and I first thought about a x/y/zoom system for paper-based zooming
     // but I came to think that sector span + radial axis range
     // zooming will be better
     //
@@ -127,160 +308,16 @@ module.exports = {
     bgcolor: {
         valType: 'color',
         role: 'style',
-        editType: 'style',
+        editType: 'plot',
         dflt: colorAttrs.background,
         description: 'Set the background color of the subplot'
     },
 
-    radialaxis: extendFlat({
-        type: axesAttrs.type,
-        autorange: axesAttrs.autorange,
-        // might make 'nonnegative' the default
-        rangemode: axesAttrs.rangemode,
-        range: axesAttrs.range,
-        categoryorder: axesAttrs.categoryorder,
-        categoryarray: axesAttrs.categoryarray,
-        calendar: axesAttrs.calendar,
-
-        // position (analogous to xaxis.position),
-        // or maybe something more specific e.g. angle angleoffset?
-        //
-        // (should this support any data coordinate system?)
-        // maybe it most intuitive to set this as just an angle!
-        position: {
-            valType: 'angle',
-            // valType: 'any',
-            editType: 'plot',
-            role: 'info',
-            dflt: 0,
-            description: [
-                '...',
-                'defaults to the first `polar.sector` angle.'
-            ].join(' ')
-        },
-
-        side: {
-            valType: 'enumerated',
-            // maybe 'clockwise' and 'counterclockwise' would be best here
-            values: ['left', 'right'],
-            dflt: 'right',
-            editType: 'plot',
-            role: 'info',
-            description: [
-                '...'
-            ].join(' ')
-        },
-
-        // N.B. the radialaxis grid lines are circular
-
-        // only applies to radial axis for now (i.e. for cliponaxis: false traces)
-        // but angular.layer could be a thing later
-        layer: axesAttrs.layer,
-
-        // hmm maybe range should be a 'max' instead
-        // so that always starts at 0?
-        // -> mpl allow radial ranges to start off 0
-        // -> same for matlab: https://www.mathworks.com/help/matlab/ref/rlim.html
-
-        // do we need some attribute that determines the span
-        // to draw donut-like charts
-        // e.g. https://github.com/matplotlib/matplotlib/issues/4217
-        //
-        // maybe something like 'span' or 'hole' (like pie, but pie set it in data coords)
-        // span: {},
-        // hole: 1
-
-        // maybe should add a boolean to enable square grid lines
-        // and square axis lines
-        // (most common in radar-like charts)
-        // e.g. squareline/squaregrid or showline/showgrid: 'square' (on-top of true)
-
-        editType: 'calc'
-    }, axisStyleAttrs),
-
-    angularaxis: extendFlat({
-        type: {
-            valType: 'enumerated',
-            // 'linear' should probably be called 'angle' or 'angular' here
-            // to make clear that axis here is periodic.
-            //
-            // no 'log' for now
-            values: ['-', 'linear', 'date', 'category'],
-            dflt: '-',
-            role: 'info',
-            editType: 'calc',
-            description: [
-                ''
-            ].join(' ')
-        },
-
-        categoryorder: axesAttrs.categoryorder,
-        categoryarray: axesAttrs.categoryarray,
-        calendar: axesAttrs.calendar,
-
-        period: {
-            valType: 'any'
-
-            // defaults to 360 / 2*pi for linear
-            // and to full range for other types
-
-            // similar to dtick
-            // to achieve e.g.:
-            // - period that equals the timeseries length
-            //  http://flowingdata.com/2017/01/24/one-dataset-visualized-25-ways/18-polar-coordinates/
-            // - and 1-year periods (focusing on seasonal change0
-            //  http://otexts.org/fpp2/seasonal-plots.html
-            //  http://www.seasonaladjustment.com/2012/09/05/clock-plot-visualising-seasonality-using-r-and-ggplot2-part-3/
-        },
-
-        thetaunit: {
-            valType: 'enumerated',
-            values: ['radians', 'degrees'],
-            dflt: 'degrees',
-            role: 'info',
-            editType: 'calc+clearAxisTypes',
-            description: [
-                'Sets the format unit of the formatted *theta* values.',
-                'Has an effect only when `angularaxis.type` is *linear*.'
-            ].join(' ')
-        },
-
-        // we could make the default 'clockwise' for date axes ...
-        direction: {
-            valType: 'enumerated',
-            values: ['counterclockwise', 'clockwise'],
-            dflt: 'counterclockwise',
-            role: 'info',
-            editType: 'calc',
-            description: [
-                'Sets the direction corresponding to positive angles.'
-            ].join(' ')
-        },
-
-        // matlab uses thetaZeroLocation: 'North', 'West', 'East', 'South'
-        // mpl uses set_theta_zero_location('W', offset=10)
-        //
-        // position is analogous to yaxis.position, but as an angle (going
-        // counterclockwise about cartesian y=0.
-        //
-        // we could maybe make `position: 90` by default for category and date angular axes.
-        position: {
-            valType: 'angle',
-            dflt: 0,
-            editType: 'calc',
-            role: 'info',
-            description: [
-                'Start position (in degree between -180 and 180) of the angular axis',
-                'Note that by default, polar subplots are orientation such that the theta=0',
-                'corresponds to a line pointing right.',
-                'For example to make the angular axis start from the North (like on a compass),'
-
-            ].join(' ')
-        },
-
-        editType: 'calc'
-    }, axisStyleAttrs),
+    radialaxis: radialAxisAttrs,
+    angularaxis: angularAxisAttrs,
 
     // TODO maybe?
     // annotations:
+
+    editType: 'calc'
 };
